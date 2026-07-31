@@ -1,0 +1,42 @@
+# 依赖目录
+node_modules/
+
+# 环境变量与本地密钥
+.env
+.env.*
+!.env.example
+*.local
+
+# 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 构建与缓存产物
+dist/
+build/
+.cache/
+.temp/
+tmp/
+coverage/
+
+# HBuilderX / uni-app 常见生成目录
+unpackage/
+.hbuilderx/
+
+# 只跟踪支付宝云开发目录，忽略 hbuilder 下其它内容
+hbuilder/*
+!hbuilder/hbuilder/
+hbuilder/hbuilder/*
+!hbuilder/hbuilder/uniCloud-alipay/
+!hbuilder/hbuilder/uniCloud-alipay/**
+
+# 编辑器与系统文件
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

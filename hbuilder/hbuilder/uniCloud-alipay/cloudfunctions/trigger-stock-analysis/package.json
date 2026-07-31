@@ -1,0 +1,14 @@
+{
+  "name": "trigger-stock-analysis",
+  "version": "1.0.0",
+  "description": "创建 analysis job 并触发 GitHub Actions 工作流",
+  "main": "index.js",
+  "author": "nhm",
+  "license": "ISC",
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60,
+    "triggers": [],
+    "path": "/trigger-stock-analysis"
+  }
+}

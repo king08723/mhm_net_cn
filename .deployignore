@@ -1,0 +1,36 @@
+# 静态托管部署排除清单（由 watch-deploy.js 读取）
+# 规则：一行一条；# 开头为注释；目录可写名称或 name/
+
+# —— 本地/工具与 Agent ——
+.agents/
+watch-deploy.js
+.deployignore
+.deploy-staging/
+
+# —— HBuilderX / uniCloud 云函数工程（走云函数上传，不进静态站）——
+hbuilder/
+
+# —— 运维脚本（Actions 回传等，非前端资源）——
+scripts/
+
+# —— 依赖与包管理 ——
+node_modules/
+package.json
+package-lock.json
+npm-debug.log*
+
+# —— 版本控制与 IDE ——
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# —— 系统与杂项 ——
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*

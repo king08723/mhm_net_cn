@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>403 禁止访问 | 宁火明（NingHuoMing）</title>
+    <meta name="description" content="403 Forbidden - 禁止访问" />
+    <meta name="robots" content="noindex,follow" />
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-1hcNqWf1vSgk7FJcQ3x0fDkzHkQHjvS4p7H9wGk1mQ8mH2k3EoGkXhGzIuG7A1Q6p4M8QpY2f4oJ2cQ9Gv9R0w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <!-- 自定义动效样式 -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-gradient-to-br from-[#0b1e33] via-[#102a43] to-[#081624] text-white">
+    <!-- 统一导航栏 -->
+    <header class="sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
+      <nav class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <a href="./index.html" class="flex items-center gap-3">
+            <img src="https://placehold.co/48x48?text=N" alt="Logo" class="rounded-md" />
+            <div class="leading-tight">
+              <span class="font-semibold text-lg">宁火明</span>
+              <span class="block text-sm text-blue-300">NingHuoMing</span>
+            </div>
+          </a>
+          
+          <!-- Desktop Menu -->
+          <div class="hidden md:flex items-center gap-6">
+            <a href="./index.html" class="hover:text-blue-300">首页</a>
+            <a href="./services.html" class="hover:text-blue-300">服务与方案</a>
+            <a href="./portfolio.html" class="hover:text-blue-300">案例展示</a>
+            <a href="./quant.html" class="hover:text-blue-300">量化系统</a>
+            <a href="./contact.html" class="hover:text-blue-300">联系与关于</a>
+          </div>
+
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn" class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
+          <div class="flex flex-col gap-4 mt-4">
+            <a href="./index.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">首页</a>
+            <a href="./services.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">服务与方案</a>
+            <a href="./portfolio.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">案例展示</a>
+            <a href="./quant.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">量化系统</a>
+            <a href="./contact.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">联系与关于</a>
+            <a href="./contact.html#contact-form" class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg">
+              <i class="fa-solid fa-calendar-check mr-2"></i> 预约咨询
+            </a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- 403 内容区域 -->
+    <main class="flex-1 flex items-center justify-center min-h-[60vh] relative overflow-hidden">
+        <!-- 背景装饰 -->
+        <div class="absolute inset-0 pointer-events-none">
+            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-900/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="container mx-auto px-4 relative z-10 text-center animate-on-scroll">
+            <!-- 大背景字 -->
+            <div class="relative">
+                <h1 class="text-[120px] md:text-[200px] font-bold text-blue-900/20 select-none leading-none">
+                    403
+                </h1>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                    <div class="bg-white/5 backdrop-blur-sm border border-white/10 p-8 rounded-2xl shadow-2xl max-w-lg w-full transform hover:scale-105 transition-transform duration-300">
+                        <div class="text-5xl text-blue-400 mb-4">
+                            <i class="fa-solid fa-user-lock"></i>
+                        </div>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">禁止访问</h2>
+                        <h3 class="text-lg text-blue-300 mb-4">Access Forbidden</h3>
+                        <p class="text-blue-100 mb-8 leading-relaxed">
+                            抱歉，您没有权限访问此页面。<br/>
+                            可能是您的访问凭证已过期或该资源受到保护。
+                        </p>
+                        <div class="flex flex-col sm:flex-row justify-center gap-4">
+                            <a href="./index.html" class="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-500 font-medium inline-flex items-center justify-center gap-2 shadow-lg transition-all hover:-translate-y-1">
+                                <i class="fa-solid fa-house"></i>
+                                <span>返回首页</span>
+                            </a>
+                            <a href="./contact.html" class="px-6 py-3 rounded-md border border-blue-400 text-blue-300 hover:bg-blue-900/30 font-medium inline-flex items-center justify-center gap-2 transition-all hover:-translate-y-1">
+                                <i class="fa-solid fa-headset"></i>
+                                <span>联系支持</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 统一页脚 -->
+    <footer class="mt-auto border-t border-white/10 bg-[#081624]">
+      <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+        <div>
+          <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
+          <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
+        </div>
+        <div>
+          <h4 class="font-semibold">快速导航</h4>
+          <ul class="mt-2 space-y-2 text-blue-200">
+            <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
+            <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
+            <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
+            <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
+            <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold">联系我</h4>
+          <ul class="mt-2 space-y-2 text-blue-200">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-phone"></i> <span id="contact-phone"></span></li>
+            <li class="flex items-center gap-2"><i class="fa-brands fa-weixin"></i> <span id="contact-wechat"></span></li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-envelope"></i> <span id="contact-email-main"></span></li>
+          </ul>
+          <div class="mt-3 flex items-center gap-3 text-blue-300">
+            <a href="#" class="hover:text-white"><i class="fa-brands fa-github text-xl"></i></a>
+            <a href="#" class="hover:text-white"><i class="fa-brands fa-linkedin text-xl"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-white/10">
+        <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
+          © 2026 宁火明（NingHuoMing）. 保留所有权利。
+        </div>
+      </div>
+    </footer>
+
+    <!-- 动效脚本 -->
+    <script src="js/script.js"></script>
+    
+    <!-- 联系方式混淆脚本 (保持一致性) -->
+    <script>
+      (function() {
+        const p = 'MTgwMjg3MzE2NjQ=';
+        const w = 'Y2FpcWluZ2NvbmcxOA==';
+        const e1 = 'eGlvMTAwODZAaWNsb3VkLmNvbQ==';
+        
+        function d(s) { return atob(s); }
+        function setContent(id, val) {
+          const els = document.querySelectorAll('#' + id);
+          els.forEach(el => el.textContent = val);
+        }
+        
+        window.addEventListener('DOMContentLoaded', () => {
+           setContent('contact-phone', d(p));
+           setContent('contact-wechat', d(w));
+           setContent('contact-email-main', d(e1));
+        });
+      })();
+    </script>
+  </body>
+</html>

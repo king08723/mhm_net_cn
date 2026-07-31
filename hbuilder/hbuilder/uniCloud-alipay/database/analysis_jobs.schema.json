@@ -1,0 +1,96 @@
+{
+  "bsonType": "object",
+  "required": ["jobId", "symbol", "status", "requestedAt"],
+  "permission": {
+    "read": false,
+    "create": false,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": {
+      "description": "系统自动生成的文档 ID"
+    },
+    "jobId": {
+      "bsonType": "string",
+      "description": "任务唯一 ID（一次点击对应一次任务）",
+      "title": "任务 ID"
+    },
+    "symbol": {
+      "bsonType": "string",
+      "description": "股票代码（大写）",
+      "title": "股票代码"
+    },
+    "status": {
+      "bsonType": "string",
+      "description": "queued | running | succeeded | failed | timeout",
+      "title": "任务状态",
+      "enum": ["queued", "running", "succeeded", "failed", "timeout"]
+    },
+    "requestedAt": {
+      "bsonType": "long",
+      "description": "任务创建时间（毫秒时间戳）",
+      "title": "请求时间"
+    },
+    "startedAt": {
+      "bsonType": "long",
+      "description": "分析开始时间（毫秒）",
+      "title": "开始时间"
+    },
+    "finishedAt": {
+      "bsonType": "long",
+      "description": "分析结束时间（毫秒）",
+      "title": "结束时间"
+    },
+    "generatedAt": {
+      "bsonType": "long",
+      "description": "报告生成时间（毫秒，来自 Actions）",
+      "title": "生成时间"
+    },
+    "runId": {
+      "bsonType": "string",
+      "description": "GitHub Actions run id",
+      "title": "Run ID"
+    },
+    "error": {
+      "bsonType": "string",
+      "description": "失败原因",
+      "title": "错误信息"
+    },
+    "report": {
+      "bsonType": "string",
+      "description": "个股分析 Markdown",
+      "title": "个股报告"
+    },
+    "marketReview": {
+      "bsonType": "string",
+      "description": "市场复盘 Markdown",
+      "title": "市场复盘"
+    },
+    "reportSha": {
+      "bsonType": "string",
+      "description": "个股报告内容指纹",
+      "title": "报告 SHA"
+    },
+    "marketReviewSha": {
+      "bsonType": "string",
+      "description": "复盘内容指纹",
+      "title": "复盘 SHA"
+    },
+    "manifestUrl": {
+      "bsonType": "string",
+      "description": "analysis-results 分支上的 manifest 路径或 URL",
+      "title": "Manifest"
+    },
+    "source": {
+      "bsonType": "string",
+      "description": "结果来源：db | callback | github-job",
+      "title": "来源"
+    },
+    "clientIp": {
+      "bsonType": "string",
+      "description": "触发请求 IP（限流审计）",
+      "title": "客户端 IP"
+    }
+  }
+}

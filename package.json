@@ -1,0 +1,8 @@
+{
+  "name": "mypage",
+  "private": true,
+  "scripts": {
+    "watch": "node watch-deploy.js",
+    "deploy": "node watch-deploy.js --once"
+  }
+}

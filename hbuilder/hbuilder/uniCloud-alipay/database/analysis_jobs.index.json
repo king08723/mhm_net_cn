@@ -1,0 +1,46 @@
+[
+  {
+    "IndexName": "jobId",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "jobId",
+          "Direction": "1"
+        }
+      ],
+      "MgoIsUnique": true
+    }
+  },
+  {
+    "IndexName": "symbol_requestedAt",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "symbol",
+          "Direction": "1"
+        },
+        {
+          "Name": "requestedAt",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  },
+  {
+    "IndexName": "status_requestedAt",
+    "MgoKeySchema": {
+      "MgoIndexKeys": [
+        {
+          "Name": "status",
+          "Direction": "1"
+        },
+        {
+          "Name": "requestedAt",
+          "Direction": "-1"
+        }
+      ],
+      "MgoIsUnique": false
+    }
+  }
+]

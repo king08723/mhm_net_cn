@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <!-- 关键说明：SEO 与 Open Graph 元信息，确保在社交平台和搜索引擎展示优质摘要 -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>宁火明（NingHuoMing）— 技术合伙人 | 全栈顾问 | 量化与工业互联</title>
+    <meta name="description" content="连接技术与生意：从MVP落地到工业互联的实战专家。宁火明（NingHuoMing）— 技术合伙人、量化系统与企业数字化咨询。" />
+    <meta name="keywords" content="技术合伙,MVP,量化交易,Backtrader,工业互联,ERP,Odoo,全栈开发,咨询" />
+    <meta name="author" content="NingHuoMing" />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href="./index.html" />
+    <meta property="og:title" content="宁火明（NingHuoMing）— 技术合伙人 | 全栈顾问" />
+    <meta property="og:description" content="让技术为你赚钱，融合商业洞察与智能技术，构建您的数字护城河。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="./index.html" />
+    <!-- 占位图：后续替换为真实品牌图像 -->
+    <meta property="og:image" content="https://placehold.co/1200x630?text=NingHuoMing+Brand" />
+    <meta property="og:site_name" content="NingHuoMing" />
+
+    <!-- 关键说明：Tailwind CSS CDN（JIT 模式支持任意值颜色） -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 关键说明：FontAwesome 图标库 -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      integrity="sha512-1hcNqWf1vSgk7FJcQ3x0fDkzHkQHjvS4p7H9wGk1mQ8mH2k3EoGkXhGzIuG7A1Q6p4M8QpY2f4oJ2cQ9Gv9R0w=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <!-- 自定义动效样式 -->
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body class="min-h-screen flex flex-col bg-gradient-to-br from-[#0b1e33] via-[#102a43] to-[#081624] text-white">
+    <!-- 统一导航栏（所有页面保持一致） -->
+    <header class="sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
+      <nav class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <a href="./index.html" class="flex items-center gap-3">
+            <!-- 占位图：Logo，后续替换为真实品牌标识 -->
+            <!-- 建议尺寸：48x48px (或 64x64px) | 内容：网站 Logo 图标或个人头像 -->
+            <img src="https://placehold.co/48x48?text=SU" alt="Logo 占位图" class="rounded-md" />
+            <div class="leading-tight">
+              <span class="font-semibold text-lg">宁火明</span>
+              <span class="block text-sm text-blue-300">NingHuoMing</span>
+            </div>
+          </a>
+          
+          <!-- Desktop Menu -->
+          <div class="hidden md:flex items-center gap-6">
+            <a href="./index.html" class="hover:text-blue-300">首页</a>
+          <a href="./services.html" class="hover:text-blue-300">服务与方案</a>
+          <a href="./portfolio.html" class="hover:text-blue-300">案例展示</a>
+          <a href="./quant.html" class="hover:text-blue-300">量化系统</a>
+          <a href="./contact.html" class="hover:text-blue-300">联系与关于</a>
+          </div>
+
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn" class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
+          <div class="flex flex-col gap-4 mt-4">
+            <a href="./index.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">首页</a>
+            <a href="./services.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">服务与方案</a>
+            <a href="./portfolio.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">案例展示</a>
+            <a href="./quant.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">量化系统</a>
+            <a href="./contact.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">联系与关于</a>
+            <a href="./contact.html#contact-form" class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg">
+              <i class="fa-solid fa-calendar-check mr-2"></i> 预约咨询
+            </a>
+          </div>
+        </div>
+      </nav>
+      <!-- 关键说明：全站统一 Slogan 顶部条，强化品牌主张 -->
+      <div class="hidden md:block border-t border-white/10 bg-blue-900/40">
+        <div class="container mx-auto px-4 py-2 text-xs md:text-sm text-blue-200 flex items-center justify-center md:justify-start gap-2">
+          <i class="fa-solid fa-bullhorn text-blue-300 flex-shrink-0"></i>
+          <span class="truncate">为创业者提供技术合伙级支持，为企业提供数字化转型策略与咨询</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <!-- Hero Section：品牌主张与快速转化 -->
+      <section class="relative">
+        <!-- 背景装饰 -->
+        <div class="absolute inset-0 bg-gradient-to-b from-blue-900/40 via-transparent to-transparent pointer-events-none"></div>
+        <div class="container mx-auto px-4 py-10 md:py-16 grid md:grid-cols-2 gap-10 items-center">
+          <div class="animate-on-scroll">
+            <h1 class="text-3xl md:text-5xl font-bold leading-tight">
+              连接技术与生意：从MVP落地到工业互联的实战专家
+            </h1>
+            <p class="mt-6 text-lg text-blue-200">
+              我是宁火明。让技术为你赚钱，融合商业洞察与智能技术，构建您的数字护城河。
+            </p>
+            <div class="mt-8 flex flex-wrap gap-4">
+              <a href="./contact.html#contact-form" class="px-5 py-3 rounded-md bg-blue-600 hover:bg-blue-500 font-medium inline-flex items-center gap-2 shadow-lg hover:shadow-blue-500/30">
+                <i class="fa-solid fa-handshake-angle"></i>
+                <span>预约咨询</span>
+              </a>
+              <a href="./portfolio.html" class="px-5 py-3 rounded-md border border-blue-400 text-blue-300 hover:bg-blue-900/30 font-medium inline-flex items-center gap-2">
+                <i class="fa-solid fa-briefcase"></i>
+                <span>查看案例</span>
+              </a>
+            </div>
+          </div>
+          <div class="relative animate-on-scroll delay-200">
+            <!-- 互联网开源图片（Unsplash）：可替换为个人品牌照片 -->
+            <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
+            <!-- 建议尺寸：1200x500px | 内容：首页主图，展示技术与商业融合的场景，或个人讲演照片 -->
+            <img src="images/index-1.webp" alt="技术与商业融合的工作场景" class="rounded-xl shadow-2xl border border-white/10 transition-transform duration-500 ease-in-out hover:scale-105 cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 指标与可信度展示（KPI Strip） -->
+      <!-- 关键说明：以量化指标增强信任与专业度 -->
+      <section class="container mx-auto px-4 pb-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 text-center hover-card animate-on-scroll delay-100 group">
+            <div class="text-3xl font-bold text-blue-300">12+</div>
+            <div class="text-blue-200">MVP 快速交付</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 text-center hover-card animate-on-scroll delay-200 group">
+            <div class="text-3xl font-bold text-blue-300">30+</div>
+            <div class="text-blue-200">量化策略稳定运行</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 text-center hover-card animate-on-scroll delay-300 group">
+            <div class="text-3xl font-bold text-blue-300">6+</div>
+            <div class="text-blue-200">企业数字化项目经验</div>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 text-center hover-card animate-on-scroll delay-100 group">
+            <div class="text-3xl font-bold text-blue-300">7天</div>
+            <div class="text-blue-200">平均上线周期</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 合作流程（Timeline） -->
+      <!-- 关键说明：清晰展示合作路径，降低不确定性与沟通成本 -->
+      <section class="container mx-auto px-4 py-10">
+        <h2 class="text-2xl md:text-3xl font-bold animate-on-scroll">合作流程</h2>
+        <div class="mt-6 grid md:grid-cols-5 gap-4">
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 hover-card animate-on-scroll delay-100 group">
+            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-comments icon-pulse"></i><span class="font-semibold">01 需求澄清</span></div>
+            <p class="mt-2 text-blue-200">聚焦业务目标、边界与关键成功指标。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 hover-card animate-on-scroll delay-200 group">
+            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-lightbulb icon-pulse"></i><span class="font-semibold">02 方案评估</span></div>
+            <p class="mt-2 text-blue-200">技术选型与架构草案，给出预算与周期。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 hover-card animate-on-scroll delay-300 group">
+            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-flask icon-pulse"></i><span class="font-semibold">03 原型/MVP</span></div>
+            <p class="mt-2 text-blue-200">从 0 到 1，快速验证核心价值。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 hover-card animate-on-scroll delay-100 group">
+            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-repeat icon-pulse"></i><span class="font-semibold">04 迭代交付</span></div>
+            <p class="mt-2 text-blue-200">需求收敛与功能扩展，完善体验与稳定性。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-4 hover-card animate-on-scroll delay-200 group">
+            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-rocket icon-pulse"></i><span class="font-semibold">05 上线优化</span></div>
+            <p class="mt-2 text-blue-200">部署、监控、数据回流与持续优化。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 客户评价（Testimonials） -->
+      <section class="container mx-auto px-4 py-10">
+        <h2 class="text-2xl md:text-3xl font-bold animate-on-scroll">客户评价</h2>
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <blockquote class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-100 group">
+            <p class="text-blue-100">“7天内将核心流程跑通，MVP即刻投入试点，节省了我们大量沟通与试错成本。”</p>
+            <div class="mt-3 text-blue-300 flex items-center gap-2"><i class="fa-solid fa-user-tie"></i><span>创业者 · 家装平台</span></div>
+          </blockquote>
+          <blockquote class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-200 group">
+            <p class="text-blue-100">“量化系统整合了数据与回测，我们能更快迭代策略并管控风险。”</p>
+            <div class="mt-3 text-blue-300 flex items-center gap-2"><i class="fa-solid fa-chart-line"></i><span>个人投资者 · AlphaQuant</span></div>
+          </blockquote>
+          <blockquote class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-300 group">
+            <p class="text-blue-100">“库存与批次数据清晰可控，生产与质量数据沉淀显著提升了管理效率。”</p>
+            <div class="mt-3 text-blue-300 flex items-center gap-2"><i class="fa-solid fa-industry"></i><span>新材料企业 · 供应链部门</span></div>
+          </blockquote>
+        </div>
+      </section>
+
+      <!-- 常见问题（FAQ） -->
+      <section class="container mx-auto px-4 pb-8">
+        <h2 class="text-2xl md:text-3xl font-bold animate-on-scroll">常见问题</h2>
+        <div class="mt-6 grid md:grid-cols-2 gap-6">
+          <div class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-100 group">
+            <h3 class="font-semibold text-blue-300">如何开始合作？</h3>
+            <p class="mt-2 text-blue-100">先预约 30 分钟沟通，明确目标与范围后，我会提供技术路径与报价。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-200 group">
+            <h3 class="font-semibold text-blue-300">费用如何计算？</h3>
+            <p class="mt-2 text-blue-100">支持小时咨询、项目制一口价与长期顾问月费，具体视需求而定。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-100 group">
+            <h3 class="font-semibold text-blue-300">是否支持远程？</h3>
+            <p class="mt-2 text-blue-100">可远程交付并支持到场调研与实施，按项目安排。</p>
+          </div>
+          <div class="rounded-xl bg-white/5 border border-white/10 p-6 hover-card animate-on-scroll delay-200 group">
+            <h3 class="font-semibold text-blue-300">代码与数据归属？</h3>
+            <p class="mt-2 text-blue-100">按合同约定，交付代码与数据属客户；我会提供文档与移交支持。</p>
+          </div>
+        </div>
+      </section>
+      <!-- Value Proposition：三列价值主张 -->
+      <section class="container mx-auto px-4 pt-8 pb-14">
+        <h2 class="text-2xl md:text-3xl font-bold">我能为谁创造价值</h2>
+        <p class="mt-2 text-blue-200">创业者、个人投资者与中小企业的技术合伙人。</p>
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="rounded-xl border border-white/10 bg-white/5 p-6 hover-card group">
+            <div class="flex items-center gap-3 text-blue-300">
+              <i class="fa-solid fa-rocket text-2xl"></i>
+              <h3 class="text-xl font-semibold">敏捷开发（针对创业者）</h3>
+            </div>
+            <p class="mt-4 text-blue-100">
+              7天上线微信小程序 / Web，包含复杂图表（甘特图）与业务逻辑。
+            </p>
+            <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
+            <!-- 建议尺寸：800x300px | 内容：敏捷开发、代码编辑器、看板或团队协作场景 -->
+            <img src="images/index-2.webp" alt="敏捷开发与快速迭代场景" class="mt-4 rounded-lg border border-white/10" />
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-6 hover-card group">
+            <div class="flex items-center gap-3 text-blue-300">
+              <i class="fa-solid fa-chart-line text-2xl"></i>
+              <h3 class="text-xl font-semibold">量化工程（针对投资者）</h3>
+            </div>
+            <p class="mt-4 text-blue-100">
+              构建基于 Python / Backtrader 的私人量化交易系统，打通券商数据。
+            </p>
+            <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
+            <!-- 建议尺寸：800x300px | 内容：金融K线图、多屏交易终端、数据分析图表 -->
+            <!-- <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=800&h=300" alt="金融行情与量化工程示意" class="mt-4 rounded-lg border border-white/10" /> -->
+            <img src="images/index-3.webp" alt="金融行情与量化工程示意" class="mt-4 rounded-lg border border-white/10" />
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-6 hover-card animate-on-scroll delay-300 group">
+            <div class="flex items-center gap-3 text-blue-300">
+              <i class="fa-solid fa-industry text-2xl icon-pulse"></i>
+              <h3 class="text-xl font-semibold">工业互联（针对企业）</h3>
+            </div>
+            <p class="mt-4 text-blue-100">
+              基于新材料行业总监背景，提供切实可行的 ERP / 数字化转型咨询。
+            </p>
+            <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
+            <!-- 建议尺寸：800x300px | 内容：智能制造工厂、物联网设备、数字化看板 -->
+            <!-- <img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&h=300" alt="工业生产与数字化连接示意" class="mt-4 rounded-lg border border-white/10" /> -->
+            <img src="images/index-4.webp" alt="工业生产与数字化连接示意" class="mt-4 rounded-lg border border-white/10" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust / About 简介 -->
+      <section class="container mx-auto px-4 pb-16 hover-card animate-on-scroll delay-300 group">
+        <div class="rounded-2xl bg-white/5 border border-white/10 p-8 md:p-10">
+          <div class="grid md:grid-cols-3 gap-6 items-center">
+            <div class="md:col-span-2">
+              <h2 class="text-2xl font-bold">运营合伙人 + 独立开发者的双重身份</h2>
+              <p class="mt-3 text-blue-100">
+                我既参与业务运营与增长，也深入技术架构与交付。理解 ROI、现金流与渠道，亦熟悉 DevOps、架构设计与数据治理。从 MVP 到工业互联项目落地，为团队提供可盈利、可扩展、可交付的技术与管理方案。
+              </p>
+              <div class="mt-4 flex flex-wrap gap-3 text-blue-200">
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/40 border border-blue-700/40">
+                  <i class="fa-solid fa-shield-halved"></i> 值得信赖
+                </span>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/40 border border-blue-700/40">
+                  <i class="fa-solid fa-users-gear"></i> 与业务同频
+                </span>
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/40 border border-blue-700/40">
+                  <i class="fa-solid fa-layer-group"></i> 全栈且落地
+                </span>
+              </div>
+            </div>
+            <div>
+              <!-- 占位图：个人形象照 -->
+              <!-- 建议尺寸：600x600px (正方形或竖长) | 内容：个人职业形象照，建议背景干净 -->
+              <img src="images/suzhixia.webp" alt="个人照片" class="rounded-xl border border-white/10 transition-transform duration-500 ease-in-out hover:scale-105 cursor-pointer" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 统一页脚（所有页面保持一致） -->
+    <footer class="mt-auto border-t border-white/10 bg-[#081624]">
+      <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+        <div>
+          <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
+          <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
+        </div>
+        <div>
+          <h4 class="font-semibold">快速导航</h4>
+          <ul class="mt-2 space-y-2 text-blue-200">
+            <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
+            <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
+            <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
+            <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
+            <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold">联系我</h4>
+          <ul class="mt-2 space-y-2 text-blue-200">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-phone"></i> <span id="contact-phone"></span></li>
+            <li class="flex items-center gap-2"><i class="fa-brands fa-weixin"></i> <span id="contact-wechat"></span></li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-envelope"></i> <span id="contact-email-main"></span></li>
+          </ul>
+          <div class="mt-3 flex items-center gap-3 text-blue-300">
+            <a href="#" class="hover:text-white"><i class="fa-brands fa-github text-xl"></i></a>
+            <a href="#" class="hover:text-white"><i class="fa-brands fa-linkedin text-xl"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-white/10">
+        <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
+          © 2026 宁火明（NingHuoMing）. 保留所有权利。
+        </div>
+      </div>
+    </footer>
+    <!-- 动效脚本 -->
+    <script src="js/script.js"></script>
+  
+    <script>
+      (function() {
+        // Simple obfuscation: Base64 or char codes
+        // Phone: 18028731664
+        const p = 'MTgwMjg3MzE2NjQ=';
+        // WeChat: caiqingcong18
+        const w = 'Y2FpcWluZ2NvbmcxOA==';
+        // Email 1: xio10086@icloud.com
+        const e1 = 'eGlvMTAwODZAaWNsb3VkLmNvbQ==';
+        // Email 2: kinp6590@gmail.com
+        const e2 = 'a2lucDY1OTBAZ21haWwuY29t';
+
+        function d(s) { return atob(s); }
+
+        function setContent(id, val) {
+          const els = document.querySelectorAll('#' + id);
+          els.forEach(el => el.textContent = val);
+        }
+        
+        function setLink(cls, val) {
+            const els = document.querySelectorAll('.' + cls);
+            els.forEach(el => {
+                el.href = 'mailto:' + val;
+                // If it was a form action, handle that too (forms usually don't use class for action, but we replaced mailto in href/action)
+                // Wait, form action replacement resulted in action=# class=email-link-main
+                // This is valid HTML but we need to set the attribute 'action' back to mailto:
+                if (el.tagName === 'FORM') {
+                    el.action = 'mailto:' + val;
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+           setContent('contact-phone', d(p));
+           setContent('contact-wechat', d(w));
+           setContent('contact-email-main', d(e1));
+           setContent('contact-email-gmail', d(e2));
+           
+           setLink('email-link-main', d(e1));
+           setLink('email-link-gmail', d(e2));
+        });
+      })();
+    </script>
+    </body>
+</html>

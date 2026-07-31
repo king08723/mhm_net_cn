@@ -1,0 +1,14 @@
+{
+  "name": "get-stock-result",
+  "version": "1.0.0",
+  "description": "按 jobId 从 GitHub jobs/ 查询分析任务结果",
+  "main": "index.js",
+  "author": "nhm",
+  "license": "ISC",
+  "cloudfunction-config": {
+    "memorySize": 512,
+    "timeout": 60,
+    "triggers": [],
+    "path": "/get-stock-result"
+  }
+}
