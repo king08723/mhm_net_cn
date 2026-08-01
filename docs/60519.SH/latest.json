@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msaox04m_b0b61e574471",
+  "symbol": "60519.SH",
+  "generatedAt": 1785608236884,
+  "runId": "30712052881",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msaox04m_b0b61e574471/report.md",
+    "marketReview": "jobs/job_msaox04m_b0b61e574471/market_review.md",
+    "manifest": "jobs/job_msaox04m_b0b61e574471/manifest.json",
+    "metrics": "jobs/job_msaox04m_b0b61e574471/metrics.json"
+  }
+}
