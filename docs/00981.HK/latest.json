@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msai7eid_5a4ea69fffd2",
+  "symbol": "00981.HK",
+  "generatedAt": 1785597013639,
+  "runId": "30705169655",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "买入",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msai7eid_5a4ea69fffd2/report.md",
+    "marketReview": "jobs/job_msai7eid_5a4ea69fffd2/market_review.md",
+    "manifest": "jobs/job_msai7eid_5a4ea69fffd2/manifest.json",
+    "metrics": "jobs/job_msai7eid_5a4ea69fffd2/metrics.json"
+  }
+}
