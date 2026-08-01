@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msaj5f43_5639cde2cb8a",
+  "symbol": "00992.HK,NVDA",
+  "generatedAt": 1785598742597,
+  "runId": "30706137110",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msaj5f43_5639cde2cb8a/report.md",
+    "marketReview": "jobs/job_msaj5f43_5639cde2cb8a/market_review.md",
+    "manifest": "jobs/job_msaj5f43_5639cde2cb8a/manifest.json",
+    "metrics": "jobs/job_msaj5f43_5639cde2cb8a/metrics.json"
+  }
+}
