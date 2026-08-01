@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msalbha3_a659965bb5f2",
+  "symbol": "TSLA",
+  "generatedAt": 1785602121457,
+  "runId": "30708383099",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msalbha3_a659965bb5f2/report.md",
+    "marketReview": "jobs/job_msalbha3_a659965bb5f2/market_review.md",
+    "manifest": "jobs/job_msalbha3_a659965bb5f2/manifest.json",
+    "metrics": "jobs/job_msalbha3_a659965bb5f2/metrics.json"
+  }
+}
