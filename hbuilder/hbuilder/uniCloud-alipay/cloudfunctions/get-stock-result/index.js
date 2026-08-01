@@ -315,6 +315,7 @@ async function fetchGithubJob(jobId) {
     metrics,
     reportSha: manifest.reportSha || shortHash(report),
     marketReviewSha: manifest.marketReviewSha || shortHash(marketReview),
+    metricsSha: manifest.metricsSha || (metrics ? shortHash(JSON.stringify(metrics)) : ''),
     manifestUrl: `https://raw.githubusercontent.com/${GITHUB_DOCS_REPO}/${GITHUB_DOCS_BRANCH}/${base}/manifest.json`,
     resultFiles: {
       manifestUrl: `https://raw.githubusercontent.com/${GITHUB_DOCS_REPO}/${GITHUB_DOCS_BRANCH}/${base}/manifest.json`,
@@ -364,6 +365,28 @@ function isValidCachedResult(job) {
   if (report && !hashMatches(report, job.reportSha)) return false;
   if (marketReview && !hashMatches(marketReview, job.marketReviewSha)) return false;
   return true;
+}
+
+/**
+ * 缓存命中时仍回源刷新 metrics，避免摘要启发式修复后 DB 继续返回旧评级
+ * @param {string} jobId
+ * @returns {Promise<{metrics: object|null, metricsSha: string}>}
+ */
+async function refreshMetricsFromGithub(jobId) {
+  const base = `jobs/${jobId}`;
+  const metricsText = await fetchTextFile(`${base}/metrics.json`, {
+    allowCdn: true,
+    bustCache: true,
+    preferApi: true,
+  });
+  const metrics = parseMeta(metricsText);
+  if (!metrics || typeof metrics !== 'object') {
+    return { metrics: null, metricsSha: '' };
+  }
+  return {
+    metrics,
+    metricsSha: shortHash(JSON.stringify(metrics)),
+  };
 }
 
 /**
@@ -515,11 +538,30 @@ exports.main = async (event, context) => {
   }
 
   if (isValidCachedResult(localJob)) {
+    // 正文走缓存加速；摘要始终尝试回源，防止启发式修正后仍展示旧 rating
+    let metrics = localJob.metrics || null;
+    try {
+      const refreshed = await refreshMetricsFromGithub(jobId);
+      if (refreshed.metrics) {
+        const oldSha = String(localJob.metricsSha || shortHash(JSON.stringify(localJob.metrics || {})));
+        metrics = refreshed.metrics;
+        if (refreshed.metricsSha && refreshed.metricsSha !== oldSha) {
+          await updateJob(collection, jobId, {
+            metrics: refreshed.metrics,
+            metricsSha: refreshed.metricsSha,
+            updatedAt: Date.now(),
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('[JOB] 刷新 metrics 失败，沿用缓存:', e.message || e);
+    }
     return {
       statusCode: 200,
       headers: corsHeaders,
       body: JSON.stringify(jobResponse({
         ...localJob,
+        metrics,
         // 缓存命中：正文来自 DB，阶段语义仍视为已完成终态
         phaseSource: 'db-cache',
         source: 'db-cache',
@@ -558,6 +600,7 @@ exports.main = async (event, context) => {
         marketReviewSha: gh.marketReviewSha,
         manifestUrl: gh.manifestUrl,
         metrics: gh.metrics || null,
+        metricsSha: gh.metricsSha || (gh.metrics ? shortHash(JSON.stringify(gh.metrics)) : ''),
         // 只缓存已成功且正文非空的结果；失败/读取异常不写正文，避免污染缓存。
         report: shouldCacheBody ? gh.report : '',
         marketReview: shouldCacheBody ? gh.marketReview : '',

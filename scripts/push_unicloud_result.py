@@ -283,53 +283,162 @@ def _extract_levels(text: str, kind: str) -> List[float]:
     return out
 
 
+# 报告结论用语（含上游仪表盘「减仓/加仓」等，不能只认买入/卖出）
+_RATING_TOKEN = r"(买入|增持|加仓|持有|中性|观望|减持|减仓|卖出)"
+_TREND_TOKEN = r"(上行|上涨|偏多|看多|震荡|横盘|下行|下跌|偏空|看空)"
+
+
+def _normalize_rating(raw: str) -> str:
+    """统一展示用语，避免同义结论分裂。"""
+    text = (raw or "").strip()
+    mapping = {
+        "加仓": "买入",
+        "增持": "买入",
+        "减仓": "卖出",
+        "减持": "卖出",
+    }
+    return mapping.get(text, text)
+
+
+def _normalize_trend(raw: str) -> str:
+    text = (raw or "").strip()
+    mapping = {
+        "看多": "偏多",
+        "上涨": "上行",
+        "看空": "偏空",
+        "下跌": "下行",
+        "横盘": "震荡",
+    }
+    return mapping.get(text, text)
+
+
+def _extract_rating_from_dashboard(text: str) -> str:
+    """
+    解析仪表盘计数行，例如：🟢买入:0 🟡观望:0 🔴卖出:1
+    只认「数量 > 0」的类别，避免把「买入:0」误判为买入。
+    """
+    counts = {
+        "买入": 0,
+        "观望": 0,
+        "卖出": 0,
+    }
+    for key in counts:
+        m = re.search(rf"{key}\s*[:：]\s*(\d+)", text)
+        if m:
+            counts[key] = int(m.group(1))
+    # 有明确多数时采用；并列则放弃交给后续规则
+    ranked = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
+    if ranked and ranked[0][1] > 0 and (len(ranked) == 1 or ranked[0][1] > ranked[1][1]):
+        return ranked[0][0]
+    return ""
+
+
+def _extract_rating_from_report(text: str) -> str:
+    """按优先级抽取操作结论，避免正文里先出现的「买入:0」污染结果。"""
+    # 1) 核心结论块：`**🟠 减仓** | 看空`
+    rating = _first_match(
+        [
+            rf"核心结论[\s\S]{{0,120}}?\*\*[^*]*?{_RATING_TOKEN}\*\*",
+            rf"\*\*[^*]*?{_RATING_TOKEN}\*\*\s*\|\s*{_TREND_TOKEN}",
+        ],
+        text,
+    )
+    if rating:
+        return _normalize_rating(rating)
+
+    # 2) 分析结果摘要行：`中芯国际(00981.HK)**: 减仓 | 评分 31 | 看空`
+    rating = _first_match(
+        [
+            rf"分析结果摘要[\s\S]{{0,200}}?{_RATING_TOKEN}\s*\|",
+            rf"\*\*[^*]+\)\*\*:\s*{_RATING_TOKEN}\s*\|",
+            rf"\):\s*{_RATING_TOKEN}\s*\|\s*(?:评分|看)",
+        ],
+        text,
+    )
+    if rating:
+        return _normalize_rating(rating)
+
+    # 3) 仪表盘计数（只认 >0）
+    rating = _extract_rating_from_dashboard(text)
+    if rating:
+        return _normalize_rating(rating)
+
+    # 4) 显式标签；禁止裸匹配「买入:0」这类计数
+    rating = _first_match(
+        [
+            rf"(?:综合(?:评级|观点|建议)|投资建议|操作建议|操作结论|评级)[:：\s]*[*【\[]?\s*{_RATING_TOKEN}",
+            rf"(?<![🟢🟡🔴\w]){_RATING_TOKEN}(?!\s*[:：]\s*\d)",
+        ],
+        text,
+    )
+    return _normalize_rating(rating) if rating else ""
+
+
 def extract_metrics_from_report(report: str, symbol: str) -> Dict[str, Any]:
     """
     从 Markdown 报告启发式抽取结构化摘要。
     无法可靠抽取时给出保守默认值，保证前端摘要卡始终可展示。
     """
     text = report or ""
-    rating = _first_match(
-        [
-            r"(?:综合(?:评级|观点|建议)|投资建议|操作建议|评级)[:：\s]*[*【\[]?\s*(买入|增持|持有|中性|减持|卖出|观望)",
-            r"\b(买入|增持|持有|中性|减持|卖出|观望)\b",
-        ],
-        text,
-    )
+    rating = _extract_rating_from_report(text)
+
     risk = _first_match(
         [
-            r"(?:风险(?:等级|级别)?|风险提示)[:：\s]*[*【\[]?\s*(高|中高|中|中低|低)",
-            r"风险[^。\n]{0,20}?(高|中高|中|中低|低)",
+            r"(?:风险(?:等级|级别)|风险提示)[:：\s]*[*【\[]?\s*(高|中高|中|中低|低)",
+            r"判定为\s*(高|中高|中|中低|低)\s*置信度",
         ],
         text,
     )
-    trend = _first_match(
-        [
-            r"(?:趋势(?:判断|方向)?|走势)[:：\s]*[*【\[]?\s*(上行|上涨|偏多|震荡|横盘|下行|下跌|偏空)",
-            r"(上行|上涨|偏多|震荡|横盘|下行|下跌|偏空)趋势",
-        ],
-        text,
-    )
+    # 「中置信度」是置信度措辞，不是风险等级；若只命中置信度则不当风险
+    if risk and re.search(rf"{re.escape(risk)}\s*置信度", text) and not re.search(
+        r"风险(?:等级|级别)|风险提示", text
+    ):
+        risk = ""
+
+    trend = ""
+    # 核心结论 / 摘要行：`减仓 | 评分 31 | 看空` 或 `**减仓** | 看空`
+    for pat in (
+        rf"\*\*[^*]*?{_RATING_TOKEN}\*\*\s*\|\s*{_TREND_TOKEN}",
+        rf"{_RATING_TOKEN}\s*\|\s*评分[^|\n]*\|\s*{_TREND_TOKEN}",
+        rf"(?:趋势(?:判断|方向)?|走势)[:：\s]*[*【\[]?\s*{_TREND_TOKEN}",
+        rf"({_TREND_TOKEN})趋势",
+    ):
+        m = re.search(pat, text, flags=re.IGNORECASE)
+        if not m:
+            continue
+        # 多分组时取最后一个趋势组
+        if m.lastindex and m.lastindex >= 2:
+            trend = (m.group(m.lastindex) or "").strip()
+        else:
+            trend = (m.group(1) if m.lastindex else m.group(0)).strip()
+        if trend:
+            break
+    trend = _normalize_trend(trend)
 
     conf_raw = _first_match(
         [
             r"(?:置信度|把握|信心)[:：\s]*(\d{1,3}(?:\.\d+)?)\s*%",
             r"(?:置信度|把握|信心)[:：\s]*(0?\.\d+|1(?:\.0+)?)",
             r"confidence[:：\s]*(\d{1,3}(?:\.\d+)?%?|0?\.\d+)",
+            r"(高|中高|中|中低|低)\s*置信度",
         ],
         text,
     )
     confidence: Optional[float] = None
     if conf_raw:
-        raw = conf_raw.replace("%", "").strip()
-        try:
-            val = float(raw)
-            if val > 1:
-                val = val / 100.0
-            if 0 <= val <= 1:
-                confidence = round(val, 2)
-        except ValueError:
-            confidence = None
+        level_map = {"高": 0.8, "中高": 0.7, "中": 0.55, "中低": 0.4, "低": 0.3}
+        if conf_raw in level_map:
+            confidence = level_map[conf_raw]
+        else:
+            raw = conf_raw.replace("%", "").strip()
+            try:
+                val = float(raw)
+                if val > 1:
+                    val = val / 100.0
+                if 0 <= val <= 1:
+                    confidence = round(val, 2)
+            except ValueError:
+                confidence = None
 
     # 保守默认：抽不到时不假装高置信
     if not rating:
@@ -355,7 +464,7 @@ def extract_metrics_from_report(report: str, symbol: str) -> Dict[str, Any]:
         "resistanceLevels": _extract_levels(text, "resistance"),
         "riskLevel": risk,
         "dataAsOf": now_ms(),
-        "modelVersion": "report-heuristic-v1",
+        "modelVersion": "report-heuristic-v2",
         "realtimeEnabled": str(os.environ.get("ENABLE_REALTIME_QUOTE", "")).lower() in ("1", "true", "yes"),
         "degradedFeatures": degraded,
         "symbol": (symbol or "").upper(),
