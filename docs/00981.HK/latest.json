@@ -5,7 +5,7 @@
   "runId": "30705169655",
   "status": "succeeded",
   "phase": "succeeded",
-  "rating": "买入",
+  "rating": "卖出",
   "riskLevel": "中",
   "paths": {
     "report": "jobs/job_msai7eid_5a4ea69fffd2/report.md",
