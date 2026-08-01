@@ -405,7 +405,7 @@
               高级选项
             </button>
             <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
-              <input type="checkbox" id="force-run-checkbox" class="accent-blue-500" />
+              <input type="checkbox" id="force-run-checkbox" class="accent-blue-500" checked />
               <span>重新分析（忽略近期缓存）</span>
             </label>
             <button type="button" id="btn-resume-last" style="display:none"
@@ -469,16 +469,20 @@
           </div>
         </div>
 
-        <!-- 总进度条 -->
+        <!-- 总进度条：真实阶段显示阶段名；模拟等待显示预估进度 -->
         <div class="mb-5">
           <div class="flex justify-between text-xs text-blue-300/60 mb-1.5">
-            <span>总体进度</span>
-            <span id="progress-pct" class="font-mono text-blue-300">0%</span>
+            <span id="progress-label">预估进度</span>
+            <span id="progress-pct" class="font-mono text-blue-300">约 0%</span>
           </div>
           <div class="h-2 bg-white/5 rounded-full overflow-hidden">
             <div id="progress-bar-fill"
               class="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" style="width: 0%">
             </div>
+          </div>
+          <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-blue-300/50">
+            <span id="panel-phase-source" class="hidden">状态来源：模拟等待</span>
+            <span id="panel-debug-info" class="hidden font-mono break-all opacity-80"></span>
           </div>
         </div>
 
@@ -805,7 +809,8 @@
   <!-- 动效脚本 -->
   <script src="js/script.js"></script>
   <!-- 量化脚本 -->
-  <script src="js/quant.js"></script>
+  <!-- v 参数用于穿透静态托管/CDN 对 quant.js 的旧缓存 -->
+  <script src="js/quant.js?v=20260801-forceRun"></script>
 </body>
 
 </html>

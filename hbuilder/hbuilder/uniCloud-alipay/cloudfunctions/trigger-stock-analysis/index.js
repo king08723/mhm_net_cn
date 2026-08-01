@@ -15,9 +15,10 @@ const crypto = require('crypto');
 // 变量名：GITHUB_PAT
 // ============================================================
 const GITHUB_PAT = process.env.GITHUB_PAT;
+// 路径 3：在编排仓 mhm_net_cn 触发 Actions；上游 daily_stock_analysis 仅作源码依赖
 const REPO_OWNER = 'king08723';
-const REPO_NAME = 'daily_stock_analysis';
-const WORKFLOW_ID = '00-daily-analysis.yml';
+const REPO_NAME = 'mhm_net_cn';
+const WORKFLOW_ID = 'quant-stock-analysis.yml';
 const ACTIONS_WORKFLOW_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_ID}`;
 
 const ALLOWED_ORIGINS = [
@@ -360,8 +361,8 @@ function dispatchGitHubAction(symbol, jobId, analysisOptions, forceRun) {
       stock_symbol: symbol,
       job_id: jobId,
       mode: analysisOptions.mode,
-      // 默认不强制；用户点「重新跑一次」时 force_run=true
-      force_run: forceRun ? 'true' : 'false',
+      // 始终跳过交易日检查（与前端「重新分析/去重」解耦，避免缓存旧前端传 false 导致周末空报告）
+      force_run: 'true',
       // GitHub workflow_dispatch input 数量有限，扩展参数统一打包为 JSON。
       quant_params: JSON.stringify(analysisOptions),
     },
@@ -373,7 +374,7 @@ function dispatchGitHubAction(symbol, jobId, analysisOptions, forceRun) {
     path: `/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW_ID}/dispatches`,
     method: 'POST',
     headers: {
-      'User-Agent': 'uniCloud-StockAnalysisTrigger/4.0',
+      'User-Agent': 'uniCloud-StockAnalysisTrigger/5.0',
       Authorization: `Bearer ${GITHUB_PAT}`,
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
@@ -461,7 +462,8 @@ exports.main = async (event, context) => {
   }
 
   const options = normalizeOptions(body);
-  const forceRun = parseBoolean(body.forceRun, false);
+  // 默认 true：周末/休市也能分析；前端未传时同样跳过交易日检查
+  const forceRun = parseBoolean(body.forceRun, true);
   const symbolResult = normalizeSymbols(body.symbol, options.multiSymbols);
 
   if (symbolResult.error || !symbolResult.symbols.length) {
@@ -520,7 +522,7 @@ exports.main = async (event, context) => {
       dedupeKind: dedupe.kind,
       message: dedupe.kind === 'active'
         ? '已有相同参数的分析任务进行中，已复用该任务'
-        : '近期已有相同参数的成功任务，已复用；如需强制重跑请开启「重新跑一次」',
+        : '近期已有相同参数的成功任务，已复用；如需强制重跑请勾选「重新分析」',
       jobId: existing.jobId,
       symbol: existing.symbol || rawSymbol,
       status: existing.status || JOB_STATUS.QUEUED,

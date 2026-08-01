@@ -1,5 +1,5 @@
 /**
- * AI 量化投研分析控制脚本 (quant.js) v7.1
+ * AI 量化投研分析控制脚本 (quant.js) v7.4
  *
  * 单链路（只认 jobId，内部实现细节不对用户展示）：
  *   浏览器 → trigger-stock-analysis → 返回 jobId
@@ -7,7 +7,9 @@
  *         → jobs/{jobId}/*.md + manifest.json + metrics.json
  *         → 前端 GET get-stock-result?jobId= → 消毒渲染
  *
- * v7.1：用户可见文案产品化；诊断链接仅 ?debug=1 显示。
+ * v7.4：无真实 phase 时虚拟进度推进到「大模型综合研判」并缓行模拟；前序步骤加速。
+ * v7.3：真实 phase 展示耗时提示 + 剩余预估；metrics 摘要优先（置信度百分比）。
+ * v7.2：仅 github-manifest 驱动真实阶段；DB/pending 用受限虚拟进度；展示状态来源。
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const UNICLOUD_TRIGGER_URL = 'https://f.nhm.net.cn/trigger-stock-analysis';
   const UNICLOUD_RESULT_URL  = 'https://f.nhm.net.cn/get-stock-result';
   const HISTORY_RAW_BASE =
-    'https://raw.githubusercontent.com/king08723/daily_stock_analysis/analysis-results/docs';
+    'https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/docs';
 
   const COOLDOWN_MS            = 60 * 1000;
   const POLL_INTERVAL_INITIAL = 3000;
@@ -66,9 +68,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const SOURCE_LABELS = {
     db: '云端缓存',
+    'db-cache': '云端缓存',
     'github-job': '云端报告库',
     pending: '等待中',
   };
+
+  // 进度来源：仅 github-manifest 可驱动真实阶段进度
+  const PHASE_SOURCE_LABELS = {
+    'github-manifest': '云端阶段',
+    db: '本地排队记录',
+    'db-cache': '云端缓存',
+    pending: '等待同步',
+    simulated: '模拟等待',
+  };
+
+  // 尚无真实 manifest 时：虚拟进度推进到「大模型综合研判」并缓行，不越过「生成研究报告」
+  // 索引 4 = compute/analyze；上限落在该步中段，避免卡在「初始化分析环境」
+  const VIRTUAL_HOLD_STEP_INDEX = 4;
+  const VIRTUAL_PROGRESS_CAP = 68;
+
+  // 虚拟模式下前序步骤加速（秒），尽快进入研判等待态；研判步用更长缓行
+  const VIRTUAL_STEP_SECONDS = [3, 6, 10, 12, 150, 20];
+
+  // 停在「大模型综合研判」时轮播的模拟文案（真实 analyze 阶段也会用）
+  const ANALYZE_SIM_MESSAGES = [
+    '正在梳理技术指标与量价关系…',
+    '正在结合行业与市场环境交叉验证…',
+    '大模型正在生成多空观点与风险提示…',
+    '正在校准置信度与关键支撑/压力位…',
+    '正在汇总研判结论，请稍候…',
+  ];
 
   const STATUS_LABELS = {
     queued: '排队中',
@@ -87,6 +116,16 @@ document.addEventListener('DOMContentLoaded', () => {
     publish: '生成报告',
     succeeded: '已完成',
     failed: '失败',
+  };
+
+  // 各阶段典型耗时（秒）与剩余预估文案，配合云端 phaseMessage 使用
+  const PHASE_ETA = {
+    queued:   { typical: '约 10–30 秒', remainMin: 4, remainMax: 8 },
+    checkout: { typical: '约 15–30 秒', remainMin: 4, remainMax: 7 },
+    setup:    { typical: '约 30–60 秒', remainMin: 3, remainMax: 6 },
+    fetch:    { typical: '约 30–90 秒', remainMin: 3, remainMax: 6 },
+    analyze:  { typical: '约 2–5 分钟', remainMin: 2, remainMax: 5 },
+    publish:  { typical: '约 20–40 秒', remainMin: 0, remainMax: 1 },
   };
 
   // 须在 bootstrapFromUrlOrStorage / resumeJob 之前初始化，避免 TDZ
@@ -124,6 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const panelMessage    = document.getElementById('panel-message');
   const progressFill    = document.getElementById('progress-bar-fill');
   const progressPct     = document.getElementById('progress-pct');
+  const progressLabel   = document.getElementById('progress-label');
+  const panelPhaseSource = document.getElementById('panel-phase-source');
+  const panelDebugInfo  = document.getElementById('panel-debug-info');
   const stepsContainer  = document.getElementById('steps-container');
   const emptyState      = document.getElementById('empty-state');
   const inputHint       = document.getElementById('input-hint');
@@ -164,11 +206,62 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentJobId     = '';
   let lastPhase        = '';
   let usePhaseProgress = false;
+  let lastPhaseSource  = 'simulated';
   let rawReportText    = '';
   let rawStockText     = '';
   let rawMarketText    = '';
   let lastActionsUrl   = '';
   let lastManifestUrl  = '';
+  let lastRunId        = '';
+  let lastUpdatedAt    = 0;
+  /** 研判阶段模拟文案轮播定时器 */
+  let analyzeSimTimer  = null;
+  let analyzeSimIndex  = 0;
+
+  /** 是否开启诊断模式（URL ?debug=1） */
+  function isDebugMode() {
+    try {
+      return new URLSearchParams(window.location.search).get('debug') === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /** 仅 GitHub manifest 阶段才算「真实进度」 */
+  function isRealPhaseSource(phaseSource, source) {
+    if (phaseSource === 'github-manifest') return true;
+    // 兼容旧云函数：source=github-job 且未带 phaseSource
+    if (!phaseSource && source === 'github-job') return true;
+    return false;
+  }
+
+  function setPhaseSourceHint(phaseSource) {
+    lastPhaseSource = phaseSource || 'simulated';
+    if (!panelPhaseSource) return;
+    const label = PHASE_SOURCE_LABELS[lastPhaseSource] || PHASE_SOURCE_LABELS.simulated;
+    panelPhaseSource.textContent = `状态来源：${label}`;
+    panelPhaseSource.classList.remove('hidden');
+  }
+
+  function updateDebugInfo(extra) {
+    if (!panelDebugInfo) return;
+    if (!isDebugMode()) {
+      panelDebugInfo.classList.add('hidden');
+      panelDebugInfo.textContent = '';
+      return;
+    }
+    const parts = [
+      currentJobId ? `jobId=${currentJobId}` : '',
+      lastRunId ? `runId=${lastRunId}` : '',
+      lastPhaseSource ? `phaseSource=${lastPhaseSource}` : '',
+      extra && extra.source ? `source=${extra.source}` : '',
+      lastUpdatedAt ? `updatedAt=${formatTime(lastUpdatedAt) || lastUpdatedAt}` : '',
+      lastManifestUrl ? `manifest=${lastManifestUrl}` : '',
+      lastActionsUrl ? `actions=${lastActionsUrl}` : '',
+    ].filter(Boolean);
+    panelDebugInfo.textContent = parts.join(' · ');
+    panelDebugInfo.classList.remove('hidden');
+  }
 
   if (btnAnalyze) {
     btnAnalyze.addEventListener('click', handleAnalyze);
@@ -275,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
       enableRealtimeQuote: readCheckbox(optRealtimeQuote, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeQuote),
       enableRealtimeTechnicalIndicators: readCheckbox(optRealtimeTech, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeTechnicalIndicators),
       enableChipDistribution: readCheckbox(optChipDist, DEFAULT_ANALYSIS_OPTIONS.enableChipDistribution),
-      forceRun: readCheckbox(forceRunCheckbox, false),
     };
   }
 
@@ -385,10 +477,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function resumeJob(jobId, symbol) {
     if (!jobId) return;
     stopPolling();
+    stopAnalyzeSimMessages();
     isResultReady = false;
     currentJobId = jobId;
     lastPhase = '';
     usePhaseProgress = false;
+    lastPhaseSource = 'simulated';
+    lastRunId = '';
+    lastUpdatedAt = 0;
     persistJobIdToUrl(jobId);
     saveRecentJob({ jobId, symbol, status: 'queued' });
 
@@ -397,6 +493,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (panelSymbol) panelSymbol.textContent = symbol || '分析中…';
     setBadge('running');
     setPanelIcon('spin');
+    setPhaseSourceHint('simulated');
+    updateDebugInfo({ source: '' });
     applyProgress(Math.max(currentProgress, 5));
     startElapsedTimer();
     activateStep(0);
@@ -418,13 +516,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function applyProgress(pct) {
     const v = Math.min(Math.max(pct, 0), 100).toFixed(1);
     if (progressFill) progressFill.style.width = v + '%';
-    if (progressPct)  progressPct.textContent  = Math.round(pct) + '%';
+    // 弱化精确百分比误导：真实阶段时显示阶段名+耗时；模拟时显示约数；完成显示 100%
+    if (progressPct) {
+      if (pct >= 99.5) {
+        progressPct.textContent = '100%';
+      } else if (usePhaseProgress && lastPhase) {
+        const label = PHASE_LABELS[lastPhase] || lastPhase;
+        const tip = (PHASE_ETA[lastPhase] && PHASE_ETA[lastPhase].typical) || '';
+        progressPct.textContent = tip ? `${label} · ${tip}` : label;
+      } else {
+        progressPct.textContent = `约 ${Math.round(pct)}%`;
+      }
+    }
+    if (progressLabel) {
+      if (pct >= 99.5) progressLabel.textContent = '总体进度';
+      else progressLabel.textContent = usePhaseProgress ? '当前阶段' : '预估进度';
+    }
   }
 
   function startVirtualProgress(from, to, durationMs) {
     if (progressRafId) cancelAnimationFrame(progressRafId);
+    // 无真实 phase 时，虚拟进度不得超过上限
+    const cappedTo = usePhaseProgress ? to : Math.min(to, VIRTUAL_PROGRESS_CAP);
     const start = performance.now();
-    const delta = to - from;
+    const delta = cappedTo - from;
+    if (delta <= 0) {
+      applyProgress(from);
+      return;
+    }
     function tick(now) {
       if (isResultReady) return;
       const t     = Math.min((now - start) / durationMs, 1);
@@ -568,23 +687,114 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /** 用云端写入的 phase 驱动步骤；缺省时保留虚拟进度 */
+  /** 格式化「预计还需」文案 */
+  function formatRemainHint(phase) {
+    const eta = PHASE_ETA[phase];
+    if (!eta) return '';
+    if (eta.remainMax <= 0) return '即将完成';
+    if (eta.remainMin === eta.remainMax) return `预计还需约 ${eta.remainMin} 分钟`;
+    return `预计还需约 ${eta.remainMin}–${eta.remainMax} 分钟`;
+  }
+
+  /** 停止研判阶段的模拟文案轮播 */
+  function stopAnalyzeSimMessages() {
+    if (analyzeSimTimer) {
+      clearInterval(analyzeSimTimer);
+      analyzeSimTimer = null;
+    }
+  }
+
+  /**
+   * 在「大模型综合研判」停留时轮播模拟文案，提升等待感知
+   * @param {string} [baseMessage] 可选基础句（真实 phaseMessage 优先作前缀）
+   */
+  function startAnalyzeSimMessages(baseMessage) {
+    stopAnalyzeSimMessages();
+    analyzeSimIndex = 0;
+    const remain = formatRemainHint('analyze');
+    const remainHtml = remain
+      ? ` <span style="color:#7dd3fc;opacity:0.95">· ${remain}</span>`
+      : '';
+
+    const paint = () => {
+      if (isResultReady) {
+        stopAnalyzeSimMessages();
+        return;
+      }
+      // 真实阶段已离开 analyze，停止轮播
+      if (usePhaseProgress && lastPhase && lastPhase !== 'analyze') {
+        stopAnalyzeSimMessages();
+        return;
+      }
+      const sim = ANALYZE_SIM_MESSAGES[analyzeSimIndex % ANALYZE_SIM_MESSAGES.length];
+      analyzeSimIndex += 1;
+      if (!panelMessage) return;
+      const head = (baseMessage && String(baseMessage).trim())
+        ? String(baseMessage).trim()
+        : STEPS[VIRTUAL_HOLD_STEP_INDEX].desc;
+      panelMessage.innerHTML =
+        `<span style="color:#93c5fd">${head}</span>`
+        + `<br><span style="color:#7dd3fc;opacity:0.9">${sim}</span>${remainHtml}`;
+    };
+
+    paint();
+    analyzeSimTimer = setInterval(paint, 8000);
+  }
+
+  /**
+   * 用云端写入的 phase 驱动步骤；仅 github-manifest 才调用本函数。
+   * 早期阶段（setup/fetch）只同步、不掐断虚拟推进；研判及之后才完全接管。
+   */
   function applyPhaseProgress(phase, phaseMessage) {
     if (!phase) return;
     const idx = PHASE_STEP_INDEX[phase];
     if (typeof idx !== 'number' || idx < 0) return;
 
     const phaseChanged = phase !== lastPhase;
-    usePhaseProgress = true;
     lastPhase = phase;
+    setPhaseSourceHint('github-manifest');
 
-    // 同 phase 只刷新文案；换 phase 时再推进步骤与进度条
+    // 尚未到「大模型综合研判」：跟上真实阶段，但允许虚拟进度继续往研判走
+    if (idx < VIRTUAL_HOLD_STEP_INDEX) {
+      // 虚拟已走到研判（或更前的更高进度）时，勿被迟到的早期 phase 打回
+      const alreadyPast = currentProgress >= getStepStartPct(VIRTUAL_HOLD_STEP_INDEX) - 0.5
+        || !!analyzeSimTimer;
+      if (!alreadyPast && phaseChanged) {
+        activateStep(idx);
+        const from = Math.max(currentProgress, getStepStartPct(idx));
+        // 早期真实阶段不超过研判步起点，留给虚拟缓行
+        const to = Math.min(getStepEndPct(idx), getStepStartPct(VIRTUAL_HOLD_STEP_INDEX));
+        const durSec = VIRTUAL_STEP_SECONDS[idx] != null
+          ? VIRTUAL_STEP_SECONDS[idx]
+          : ((STEPS[idx] && STEPS[idx].duration) || 15);
+        if (to > from) {
+          startVirtualProgress(from, to, Math.max(durSec * 600, 1500));
+        }
+      }
+      // 前序步骤未进入研判模拟时，展示云端文案；已在研判模拟则不打断
+      if (panelMessage && !analyzeSimTimer && !alreadyPast) {
+        const label = PHASE_LABELS[phase] || phase;
+        let msg = (phaseMessage || `当前阶段：${label}`).trim();
+        const eta = PHASE_ETA[phase];
+        if (eta && eta.typical && !msg.includes('通常') && !msg.includes('约')) {
+          msg += `（${eta.typical}）`;
+        }
+        panelMessage.innerHTML = `<span style="color:#93c5fd">${msg}</span>`;
+      }
+      return;
+    }
+
+    // 研判及之后：完全接管，停止虚拟兜底
+    usePhaseProgress = true;
+
     if (phaseChanged) {
       activateStep(idx);
+      if (phase !== 'analyze') stopAnalyzeSimMessages();
       const from = Math.max(currentProgress, getStepStartPct(idx));
       const to = getStepEndPct(idx);
+      const durSec = (STEPS[idx] && STEPS[idx].duration) || 30;
       if (to > from) {
-        startVirtualProgress(from, to, Math.max(STEPS[idx].duration * 400, 2000));
+        startVirtualProgress(from, to, Math.max(durSec * 800, 3000));
       } else {
         applyProgress(to);
         currentProgress = to;
@@ -592,9 +802,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const label = PHASE_LABELS[phase] || phase;
-    if (panelMessage) {
-      const msg = phaseMessage || `当前阶段：${label}`;
-      panelMessage.innerHTML = `<span style="color:#93c5fd">${msg}</span>`;
+    const eta = PHASE_ETA[phase];
+    const remain = formatRemainHint(phase);
+
+    // 研判阶段：进入时开启模拟文案轮播（同 phase 轮询不重置）
+    if (phase === 'analyze') {
+      if (phaseChanged || !analyzeSimTimer) {
+        const base = (phaseMessage || `当前阶段：${label}`).trim();
+        startAnalyzeSimMessages(base);
+      }
+    } else if (panelMessage) {
+      let msg = (phaseMessage || `当前阶段：${label}`).trim();
+      if (eta && eta.typical && !msg.includes('通常') && !msg.includes('约')) {
+        msg += `（${eta.typical}）`;
+      }
+      const remainHtml = remain
+        ? ` <span style="color:#7dd3fc;opacity:0.95">· ${remain}</span>`
+        : '';
+      panelMessage.innerHTML = `<span style="color:#93c5fd">${msg}</span>${remainHtml}`;
+    }
+    if (progressPct && usePhaseProgress && phase !== 'succeeded') {
+      const tip = eta && eta.typical ? eta.typical : '';
+      progressPct.textContent = tip ? `${label} · ${tip}` : label;
     }
   }
 
@@ -646,14 +875,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function startCloudWorkflow(symbol, options) {
     stopPolling();
+    stopAnalyzeSimMessages();
     if (progressRafId) { cancelAnimationFrame(progressRafId); progressRafId = null; }
 
     isResultReady = false;
     currentJobId = '';
     lastPhase = '';
     usePhaseProgress = false;
+    lastPhaseSource = 'simulated';
     lastActionsUrl = '';
     lastManifestUrl = '';
+    lastRunId = '';
+    lastUpdatedAt = 0;
     rawReportText = '';
     rawStockText = '';
     rawMarketText = '';
@@ -670,15 +903,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (panelSymbol) panelSymbol.textContent = symbol;
     setBadge('running');
     setPanelIcon('spin');
+    setPhaseSourceHint('simulated');
+    updateDebugInfo({ source: '' });
     applyProgress(0);
     currentProgress = 0;
     startElapsedTimer();
 
     activateStep(0);
-    startVirtualProgress(0, getStepEndPct(0), STEPS[0].duration * 1000);
+    // 触发阶段加速完成；后续虚拟步骤推进到「大模型综合研判」后缓行
+    const firstDurMs = (VIRTUAL_STEP_SECONDS[0] != null ? VIRTUAL_STEP_SECONDS[0] : STEPS[0].duration) * 1000;
+    startVirtualProgress(0, Math.min(getStepEndPct(0), VIRTUAL_PROGRESS_CAP), firstDurMs);
 
     const t0 = Date.now();
-    const { forceRun, ...requestOptions } = options;
+    // 「重新分析」控制云函数去重；交易日检查由云函数 dispatch 时始终 force_run=true
+    const forceRunForDedupe = forceRunCheckbox ? !!forceRunCheckbox.checked : true;
 
     try {
       let signal;
@@ -693,8 +931,8 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
-          forceRun: !!forceRun,
-          ...requestOptions,
+          forceRun: forceRunForDedupe,
+          ...options,
         }),
         signal,
       });
@@ -759,23 +997,57 @@ document.addEventListener('DOMContentLoaded', () => {
     startCooldown();
 
     if (panelMessage) {
-      panelMessage.innerHTML = `<span style="color:#93c5fd">分析任务已创建，正在等待 AI 研究结果…</span>`;
+      panelMessage.innerHTML = `<span style="color:#93c5fd">分析任务已创建，正在等待云端开始同步状态…</span>`;
     }
+    setPhaseSourceHint('simulated');
+    updateDebugInfo({ source: 'pending' });
 
     if (UNICLOUD_RESULT_URL && currentJobId) {
       pollJobResult(currentJobId);
     }
 
-    // 无 phase 回传前，用虚拟步骤填充体验；一旦收到 phase 则由 applyPhaseProgress 接管
+    // 无真实 github-manifest 前，用受限虚拟步骤填充体验
     runVirtualSteps(1);
   }
 
   async function runVirtualSteps(startIdx) {
-    for (let i = startIdx; i < STEPS.length; i++) {
+    const holdIdx = VIRTUAL_HOLD_STEP_INDEX;
+
+    for (let i = startIdx; i <= holdIdx; i++) {
       if (isResultReady || usePhaseProgress) return;
-      const to    = getStepEndPct(i);
-      const durMs = STEPS[i].duration * 1000;
+
+      // 已到上限：保持停在「大模型综合研判」，并开启模拟文案
+      if (currentProgress >= VIRTUAL_PROGRESS_CAP - 0.5) {
+        activateStep(holdIdx);
+        setPhaseSourceHint(
+          lastPhaseSource === 'db' || lastPhaseSource === 'pending'
+            ? lastPhaseSource
+            : 'simulated'
+        );
+        startAnalyzeSimMessages('云端大模型综合研判进行中，请保持页面开启…');
+        return;
+      }
+
+      const isHold = (i === holdIdx);
+      const to = isHold
+        ? VIRTUAL_PROGRESS_CAP
+        : Math.min(getStepEndPct(i), VIRTUAL_PROGRESS_CAP);
+      // 前序加速进入研判；研判步用加长缓行
+      const durSec = VIRTUAL_STEP_SECONDS[i] != null
+        ? VIRTUAL_STEP_SECONDS[i]
+        : STEPS[i].duration;
+      const durMs = Math.max(durSec * 1000, isHold ? 8000 : 2000);
+
       activateStep(i);
+      if (isHold) {
+        setPhaseSourceHint(
+          lastPhaseSource === 'db' || lastPhaseSource === 'pending'
+            ? lastPhaseSource
+            : 'simulated'
+        );
+        startAnalyzeSimMessages('正在运行 AI 策略与大模型推理，生成投研观点…');
+      }
+
       startVirtualProgress(currentProgress, to, durMs);
       const t0 = Date.now();
 
@@ -788,14 +1060,23 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (isResultReady || usePhaseProgress) return;
-      completeStep(i, (Date.now() - t0) / 1000);
+
+      if (!isHold) {
+        completeStep(i, (Date.now() - t0) / 1000);
+      }
     }
 
-    if (!isResultReady) {
-      activateStep(STEPS.length - 1);
-      if (panelMessage) {
-        panelMessage.innerHTML = `<span style="color:#93c5fd">⏳ 分析仍在进行，请保持页面开启；也可稍后返回继续查看…</span>`;
-      }
+    // 缓行结束后仍无真实 phase：继续停在研判步并轮播
+    if (!isResultReady && !usePhaseProgress) {
+      activateStep(holdIdx);
+      applyProgress(VIRTUAL_PROGRESS_CAP);
+      currentProgress = VIRTUAL_PROGRESS_CAP;
+      setPhaseSourceHint(
+        lastPhaseSource === 'db' || lastPhaseSource === 'pending'
+          ? lastPhaseSource
+          : 'simulated'
+      );
+      startAnalyzeSimMessages('云端大模型综合研判进行中，请保持页面开启…');
     }
   }
 
@@ -803,6 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isResultReady) return;
     isResultReady = true;
     stopPolling();
+    stopAnalyzeSimMessages();
     if (progressRafId) { cancelAnimationFrame(progressRafId); progressRafId = null; }
 
     lastActionsUrl = data.actionsUrl || lastActionsUrl;
@@ -828,6 +1110,8 @@ document.addEventListener('DOMContentLoaded', () => {
         stopElapsedTimer();
         setPanelIcon('check');
         setBadge('success');
+        setPhaseSourceHint(data.phaseSource === 'db-cache' ? 'db-cache' : 'github-manifest');
+        updateDebugInfo({ source: data.source || '' });
         setBtnState('idle');
         renderReport(data);
 
@@ -848,6 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isResultReady) return;
     isResultReady = true;
     stopPolling();
+    stopAnalyzeSimMessages();
     if (progressRafId) { cancelAnimationFrame(progressRafId); progressRafId = null; }
     stopElapsedTimer();
     setPanelIcon('error');
@@ -905,7 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setBadge('error');
           setBtnState('idle');
           if (panelMessage) {
-            panelMessage.innerHTML = `<span style="color:#fb923c">⏱ 等待超时。任务可能仍在运行，可稍后返回本页继续查看。</span>`
+            panelMessage.innerHTML = `<span style="color:#fb923c">⏱ 等待超时。任务可能仍在运行，可稍后返回本页继续查看（已保留任务 ID）。</span>`
               + ` <button id="btn-re-check" style="margin-left:8px;padding:2px 8px;background:rgba(59,130,246,0.2);border:1px solid #3b82f6;color:#93c5fd;border-radius:4px;cursor:pointer;font-size:0.75rem">手动重新拉取结果</button>`;
             const reCheckBtn = document.getElementById('btn-re-check');
             if (reCheckBtn) {
@@ -935,10 +1220,42 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.actionsUrl) lastActionsUrl = data.actionsUrl;
             if (data.manifestUrl) lastManifestUrl = data.manifestUrl;
             else if (data.resultFiles && data.resultFiles.manifestUrl) lastManifestUrl = data.resultFiles.manifestUrl;
+            if (data.runId) lastRunId = String(data.runId);
+            if (data.updatedAt) lastUpdatedAt = Number(data.updatedAt) || 0;
 
-            if (data.phase) {
+            const phaseSource = data.phaseSource || '';
+            const realPhase = isRealPhaseSource(phaseSource, data.source);
+
+            // 仅 GitHub manifest 真实阶段才接管进度；DB queued 不终止虚拟兜底
+            if (realPhase && data.phase) {
               applyPhaseProgress(data.phase, data.phaseMessage || '');
+            } else if (phaseSource === 'db' || phaseSource === 'pending' || data.source === 'db' || data.source === 'pending') {
+              setPhaseSourceHint(phaseSource || data.source || 'db');
+              // 已进入研判模拟轮播时勿覆盖文案（否则会打回「同步中」）
+              if (
+                panelMessage
+                && (status === 'queued' || status === 'running')
+                && !usePhaseProgress
+                && !analyzeSimTimer
+                && currentProgress < getStepStartPct(VIRTUAL_HOLD_STEP_INDEX)
+              ) {
+                const waitHint = phaseSource === 'pending'
+                  ? '任务已提交，云端状态同步中…'
+                  : '任务已创建，等待云端开始同步阶段…';
+                panelMessage.innerHTML = `<span style="color:#93c5fd">${waitHint}</span>`;
+              }
+            } else if (
+              panelMessage
+              && (status === 'queued' || status === 'running')
+              && !data.phase
+              && !usePhaseProgress
+              && !analyzeSimTimer
+            ) {
+              const label = STATUS_LABELS[status] || status;
+              panelMessage.innerHTML = `<span style="color:#93c5fd">当前状态：${label}，正在同步分析进度…</span>`;
             }
+
+            updateDebugInfo({ source: data.source || '' });
 
             if (status === 'succeeded' && data.ready) {
               finishWorkflowSuccess(data);
@@ -949,9 +1266,11 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
             }
 
-            if (panelMessage && (status === 'queued' || status === 'running') && !data.phase) {
-              const label = STATUS_LABELS[status] || status;
-              panelMessage.innerHTML = `<span style="color:#93c5fd">当前状态：${label}，正在同步分析进度…</span>`;
+            // FETCH_FAILED：manifest 已声明报告，正文读取中 — 保持 publish 阶段重试
+            if (data.errorCode === 'FETCH_FAILED' && realPhase) {
+              if (panelMessage) {
+                panelMessage.innerHTML = `<span style="color:#fbbf24">${data.error || data.phaseMessage || '报告已发布，正在重试读取…'}</span>`;
+              }
             }
           }
         } else if (res.status === 404) {
@@ -1040,14 +1359,22 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    // 置信度统一显示为百分比，便于扫读
+    let confidenceText = '';
+    if (metrics.confidence != null && metrics.confidence !== '') {
+      const n = Number(metrics.confidence);
+      if (!Number.isNaN(n)) {
+        confidenceText = n <= 1 ? `${Math.round(n * 100)}%` : `${Math.round(n)}%`;
+      } else {
+        confidenceText = String(metrics.confidence);
+      }
+    }
+
     const cards = [
       { label: '综合观点', value: metrics.rating },
       { label: '风险等级', value: metrics.riskLevel },
       { label: '趋势判断', value: metrics.trend },
-      {
-        label: '置信度（参考）',
-        value: metrics.confidence != null ? String(metrics.confidence) : '',
-      },
+      { label: '置信度（参考）', value: confidenceText },
       {
         label: '关键支撑',
         value: Array.isArray(metrics.supportLevels) ? metrics.supportLevels.join(', ') : metrics.supportLevels,

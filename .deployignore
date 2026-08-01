@@ -3,6 +3,7 @@
 
 # —— 本地/工具与 Agent ——
 .agents/
+.github/
 watch-deploy.js
 .deployignore
 .deploy-staging/

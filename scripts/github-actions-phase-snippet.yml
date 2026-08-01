@@ -1,0 +1,14 @@
+# 已废弃（路径 1 挂点片段）
+# 正式编排见：.github/workflows/quant-stock-analysis.yml（路径 3）
+# 本文件仅作历史参考，不会被静态托管部署。
+
+name: deprecated-quant-bridge-hooks-snippet
+on:
+  workflow_dispatch: {}
+
+jobs:
+  docs-only:
+    runs-on: ubuntu-latest
+    steps:
+      - name: See real workflow
+        run: echo "Use .github/workflows/quant-stock-analysis.yml in mhm_net_cn"

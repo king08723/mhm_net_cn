@@ -12,7 +12,7 @@
 排除规则写在根目录 [`.deployignore`](file:///Users/jyy/Documents/trae_projects/myPage/.deployignore)，由 [`watch-deploy.js`](file:///Users/jyy/Documents/trae_projects/myPage/watch-deploy.js) 在上传前过滤；**不要**把仍需进 Git 的工程目录写进 `.gitignore`。
 
 当前排除（完整以 `.deployignore` 为准）：
-- `.agents/`、`watch-deploy.js`、`.deployignore`（本地 Agent / 部署工具）
+- `.agents/`、`.github/`、`watch-deploy.js`、`.deployignore`（本地 Agent / Actions / 部署工具）
 - `hbuilder/`（HBuilderX 与 uniCloud 云函数工程，走云函数上传）
 - `scripts/`（运维/回传脚本，非前端资源）
 - `node_modules/`、`package.json`、`package-lock.json`
@@ -38,10 +38,11 @@
 - **`npm run watch`**: 启动文件实时监听；排除项变更不触发；保存网页相关文件后防抖，过滤后自动部署上线。
 - **`npm run deploy`**: 手动执行单次一键部署（同样走 `.deployignore`）。
 
-## 关联 GitHub Actions 量化分析仓库
-- **仓库地址**: `king08723/daily_stock_analysis`
-- **每日股票分析 Workflow ID**: `281316696` (`.github/workflows/00-daily-analysis.yml`)
-- **API 触发接口**: `POST /repos/king08723/daily_stock_analysis/actions/workflows/281316696/dispatches`
+## 关联 GitHub Actions 量化分析（路径 3：本仓编排）
+- **编排仓库**: `king08723/mhm_net_cn`（本站）
+- **上游源码仓**: `king08723/daily_stock_analysis`（只拉取运行，不在此跑 Workflow）
+- **Workflow**: `.github/workflows/quant-stock-analysis.yml`
+- **API 触发接口**: `POST /repos/king08723/mhm_net_cn/actions/workflows/quant-stock-analysis.yml/dispatches`
 - **uniCloud 云函数目录**: `hbuilder/hbuilder/uniCloud-alipay/cloudfunctions/`
   - `trigger-stock-analysis` → `https://f.nhm.net.cn/trigger-stock-analysis`
   - `get-stock-result` → `https://f.nhm.net.cn/get-stock-result`
@@ -49,7 +50,7 @@
   - `analysis_jobs`（触发审计与去重指纹；结果正文以 GitHub 为准，不长期存 Markdown）
   - `analysis_rate_limits`（按 IP 短窗 5 次/5 分钟 + 日配额 20 次）
 - **结果中转（唯一路径）**:
-  - Actions **只**写入 `analysis-results`：
+  - Actions **只**写入本仓 `analysis-results`：
     - `jobs/{jobId}/report.md`
     - `jobs/{jobId}/market_review.md`
     - `jobs/{jobId}/manifest.json`（建议含 `phase` / `phaseMessage` / `runId`）
@@ -58,7 +59,7 @@
   - 前端只轮询 `get-stock-result?jobId=`（可用 `quant.html?jobId=` 刷新恢复）
   - 云函数按 jobId 读 GitHub 文件返回（顺序：Contents API → raw → jsDelivr；**不再** Actions→uniCloud POST）
 - **云函数环境变量**:
-  - `trigger-stock-analysis`: `GITHUB_PAT`
+  - `trigger-stock-analysis`: `GITHUB_PAT`（需能对 `mhm_net_cn` 做 `actions:write`）
   - `get-stock-result`: 建议同样配置 `GITHUB_PAT`（可选但推荐，Contents API 更稳；无 PAT 时用匿名额度）
   - 无需 `JOB_CALLBACK_SECRET`（可删除）
 - **云函数上传**（`cloudfunction-config` 不要写 `runtime`）:
@@ -66,5 +67,5 @@
   /Applications/HBuilderX.app/Contents/MacOS/cli cloud functions --upload cloudfunction --prj hbuilder --provider alipay --name get-stock-result --force
   /Applications/HBuilderX.app/Contents/MacOS/cli cloud functions --upload cloudfunction --prj hbuilder --provider alipay --name trigger-stock-analysis --force
   ```
-- **Actions 侧**: `00-daily-analysis.yml` 已含 `job_id`、`mode`、`quant_params`、`force_run` 等 inputs；`quant_params`（JSON）在「执行股票分析」步骤解析为报告类型、语言、邮件通知与实时增强开关。发布步骤只写 `analysis-results/jobs/{jobId}/`（脚本：`scripts/push_unicloud_result.py`）。建议中途更新 manifest `phase`，并可选写出 `metrics.json` / `docs/{SYMBOL}/history.json`（本站已兼容，缺省则降级）。仓库 Secret `JOB_CALLBACK_SECRET` 可删除。
-- **触发防护**: 同参数 8 分钟内去重复用 `jobId`；前端可传 `forceRun: true` 强制新跑。详情见 [quant-page-architecture.md](./quant-page-architecture.md)。
+- **Actions 侧（路径 3）**: 本仓 workflow 拉取上游 → 跑 `main.py` → `quant_bridge.sh` 写 phase/终态到本仓 `analysis-results`。LLM/数据源等推荐只配一条 Secret `QUANT_ENV_B64`（`bash scripts/sync_quant_env_secret.sh <上游.env>`）。升级清单见 [quant-upstream-upgrade.md](./quant-upstream-upgrade.md)。
+- **触发防护**: 同参数 8 分钟内去重复用 `jobId`；Actions 始终 `force_run=true`（跳过交易日检查）。前端「重新分析」只控制是否绕过短时去重。详情见 [quant-page-architecture.md](./quant-page-architecture.md)。

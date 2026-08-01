@@ -21,7 +21,8 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
 ];
 
-const GITHUB_DOCS_REPO = 'king08723/daily_stock_analysis';
+// 路径 3：结果写在编排仓 analysis-results（与触发 workflow 同仓）
+const GITHUB_DOCS_REPO = 'king08723/mhm_net_cn';
 const GITHUB_DOCS_BRANCH = 'analysis-results';
 const ACTIONS_RUNS_BASE = `https://github.com/${GITHUB_DOCS_REPO}/actions/runs`;
 /** 可选：配置后 Contents API 更稳、额度更高 */
@@ -300,6 +301,8 @@ async function fetchGithubJob(jobId) {
     phaseMessage: errorCode === 'FETCH_FAILED'
       ? (error || phaseMessage)
       : phaseMessage,
+    // 来自 GitHub manifest 的阶段，前端可据此驱动真实进度
+    phaseSource: 'github-manifest',
     updatedAt,
     generatedAt: Number(manifest.generatedAt) || 0,
     finishedAt: Number(manifest.finishedAt || manifest.generatedAt) || 0,
@@ -363,6 +366,24 @@ function isValidCachedResult(job) {
   return true;
 }
 
+/**
+ * 归一化 phaseSource，供前端区分「真实云端阶段」与「DB/本地占位」。
+ * 只有 github-manifest 才允许前端进入真实 phase 进度模式。
+ * @param {object} job
+ * @returns {string}
+ */
+function resolvePhaseSource(job) {
+  const explicit = String(job.phaseSource || '').trim().toLowerCase();
+  if (['github-manifest', 'db', 'db-cache', 'pending'].includes(explicit)) {
+    return explicit;
+  }
+  const source = String(job.source || '').trim().toLowerCase();
+  if (source === 'github-job') return 'github-manifest';
+  if (source === 'db-cache') return 'db-cache';
+  if (source === 'pending') return 'pending';
+  return 'db';
+}
+
 function jobResponse(job) {
   const status = job.status || 'queued';
   const ready = status === 'succeeded' && !!(
@@ -371,6 +392,8 @@ function jobResponse(job) {
   );
   const runId = job.runId || '';
   const actionsUrl = job.actionsUrl || buildActionsUrl(runId);
+  const source = job.source || 'db';
+  const phaseSource = resolvePhaseSource({ ...job, source });
 
   return {
     success: true,
@@ -380,6 +403,8 @@ function jobResponse(job) {
     status,
     phase: job.phase || (status === 'queued' ? 'queued' : status),
     phaseMessage: job.phaseMessage || '',
+    // 进度来源：github-manifest = 可驱动真实阶段；db/pending = 仅占位
+    phaseSource,
     updatedAt: Number(job.updatedAt) || 0,
     requestedAt: Number(job.requestedAt) || 0,
     startedAt: Number(job.startedAt) || 0,
@@ -396,7 +421,7 @@ function jobResponse(job) {
     marketReviewSha: job.marketReviewSha || '',
     manifestUrl: job.manifestUrl || '',
     resultFiles: job.resultFiles || null,
-    source: job.source || 'db',
+    source,
   };
 }
 
@@ -481,6 +506,7 @@ exports.main = async (event, context) => {
       body: JSON.stringify(jobResponse({
         ...localJob,
         phase: 'failed',
+        phaseSource: 'db',
         errorCode: localJob.errorCode || 'TRIGGER_FAILED',
         actionsUrl: localJob.actionsUrl || buildActionsUrl(localJob.runId),
         source: 'db',
@@ -494,6 +520,8 @@ exports.main = async (event, context) => {
       headers: corsHeaders,
       body: JSON.stringify(jobResponse({
         ...localJob,
+        // 缓存命中：正文来自 DB，阶段语义仍视为已完成终态
+        phaseSource: 'db-cache',
         source: 'db-cache',
       })),
     };
@@ -543,6 +571,7 @@ exports.main = async (event, context) => {
       headers: corsHeaders,
       body: JSON.stringify(jobResponse({
         ...gh,
+        phaseSource: 'github-manifest',
         requestedAt: localJob ? localJob.requestedAt : 0,
         startedAt: localJob
           ? (Number(localJob.startedAt) || Number(localJob.requestedAt) || 0)
@@ -570,6 +599,7 @@ exports.main = async (event, context) => {
       body: JSON.stringify(jobResponse({
         ...gh,
         status: gh.status || 'running',
+        phaseSource: 'github-manifest',
         ready: false,
         report: '',
         marketReview: '',
@@ -581,7 +611,7 @@ exports.main = async (event, context) => {
     };
   }
 
-  // 尚未有 GitHub 产物：返回本地 queued，或未就绪
+  // 尚未有 GitHub 产物：返回本地 queued，或未就绪（phaseSource=db，勿当真实阶段）
   if (localJob) {
     return {
       statusCode: 200,
@@ -590,6 +620,7 @@ exports.main = async (event, context) => {
         ...localJob,
         status: localJob.status || 'queued',
         phase: localJob.phase || 'queued',
+        phaseSource: 'db',
         actionsUrl: localJob.actionsUrl || buildActionsUrl(localJob.runId),
         source: 'db',
       })),
@@ -599,14 +630,14 @@ exports.main = async (event, context) => {
   return {
     statusCode: 200,
     headers: corsHeaders,
-    body: JSON.stringify({
-      success: true,
-      ready: false,
+    body: JSON.stringify(jobResponse({
       jobId,
       status: 'queued',
       phase: 'queued',
-      message: '分析尚未完成，或 jobs/{jobId}/manifest.json 尚未写入',
+      phaseMessage: '分析尚未完成，或 jobs/{jobId}/manifest.json 尚未写入',
+      phaseSource: 'pending',
       source: 'pending',
-    }),
+      ready: false,
+    })),
   };
 };

@@ -8,14 +8,14 @@
 ## 1. 目标与边界
 
 - **页面**：个人站量化分析页，输入股票代码后触发云端分析，展示 Markdown 报告与结构化摘要。
-- **算力**：不在浏览器 / uniCloud 内跑模型，而由 GitHub Actions 仓库 `king08723/daily_stock_analysis` 执行。
+- **算力**：不在浏览器 / uniCloud 内跑模型；由本仓 `mhm_net_cn` 的 GitHub Actions 拉取 `daily_stock_analysis` 源码后执行。
 - **关联键**：`jobId`（一次点击 = 一次任务 = 一份不可变结果；URL `?jobId=` 可恢复）。
-- **唯一结果源**：`analysis-results` 分支上的 `jobs/{jobId}/*`（不经 Actions→uniCloud POST）。
+- **唯一结果源**：本仓 `analysis-results` 分支上的 `jobs/{jobId}/*`（不经 Actions→uniCloud POST）。
 - **展示产物**：
   - `jobs/{jobId}/report.md`
   - `jobs/{jobId}/market_review.md`
   - `jobs/{jobId}/manifest.json`（含 `phase` / `phaseMessage` / `runId`）
-  - `jobs/{jobId}/metrics.json`（可选；缺省时前端仍只渲染 Markdown）
+  - `jobs/{jobId}/metrics.json`（成功时强制产出；缺文件则发布脚本从报告启发式生成）
   - 可选索引：`docs/{SYMBOL}/latest.json`、`docs/{SYMBOL}/history.json`
 - **不做**：不以 bridge / since / Artifact / Actions 回调写库作为结果路径。
 
@@ -75,9 +75,10 @@ sequenceDiagram
 | 网关 | `https://f.nhm.net.cn/get-stock-result` | URL 化结果 |
 | DB 集合 | `analysis_jobs` | 触发审计与去重指纹；结果正文以 GitHub 为准 |
 | DB 集合 | `analysis_rate_limits` | 按 IP 的短窗 + 日配额（跨实例） |
-| 分析仓库 | `king08723/daily_stock_analysis` | Python + LLM 分析 |
-| 同步脚本 | `scripts/push_unicloud_result.py` | 只写 `jobs/{jobId}/` |
-| 公开结果分支 | `analysis-results` | `jobs/{jobId}/*`；可选 `docs/{SYMBOL}/*.json` |
+| 编排仓库 / Workflow | `king08723/mhm_net_cn` · `quant-stock-analysis.yml` | 拉上游、跑分析、写结果 |
+| 上游源码仓 | `king08723/daily_stock_analysis` | Python + LLM（只作 checkout 依赖） |
+| 同步脚本 | `scripts/push_unicloud_result.py` | 只写本仓 `jobs/{jobId}/` |
+| 公开结果分支 | `mhm_net_cn@analysis-results` | `jobs/{jobId}/*`；可选 `docs/{SYMBOL}/*.json` |
 
 ---
 
@@ -101,7 +102,7 @@ Content-Type: application/json
   "enableRealtimeQuote": true,
   "enableRealtimeTechnicalIndicators": true,
   "enableChipDistribution": true,
-  "forceRun": false
+  "forceRun": true
 }
 ```
 
@@ -119,7 +120,7 @@ Content-Type: application/json
 - `enableRealtimeTechnicalIndicators=true`（高级选项可关）
 - `enableChipDistribution=true`（高级选项可关）
 - 通知渠道只允许新增邮件；`notificationEmail` 为空时不新增通知目标
-- `forceRun=false`；勾选「重新跑一次」可跳过去重
+- Actions 侧始终 `force_run=true`（跳过交易日检查）；前端 `forceRun` 仅控制短时去重（默认勾选「重新分析」）
 
 ### 4.2 轮询
 
@@ -129,14 +130,19 @@ GET https://f.nhm.net.cn/get-stock-result?jobId={jobId}
 
 - 前 2 分钟约 3s，之后退避至 15s，上限约 15 分钟
 - `succeeded`+`ready` 渲染；`failed`/`timeout`/`EMPTY_REPORT` 失败；`queued`/`running` 继续等
-- 若响应含 `phase`，进度条按 phase 驱动；否则退回虚拟时间线
-- 失败/超时时展示 `actionsUrl`、`manifestUrl` 链接
+- **真实进度接管条件**：仅当 `phaseSource === 'github-manifest'`（或兼容旧版 `source === 'github-job'`）时参考 `phase`；**研判及之后**才完全接管进度条；更早的 setup/fetch 只同步、不掐断虚拟推进
+- **DB / pending / 早期 phase 占位**：前端用受限虚拟进度：前序步骤约 30 秒内加速走完，停在「大模型综合研判」（进度上限约 68%）并每 8 秒轮播模拟文案，不越过「生成研究报告」
+- 进度条文案：真实阶段显示「阶段名 · 典型耗时」+「预计还需」；模拟时显示「预估进度 约 N%」
+- 面板展示「状态来源：云端阶段 / 本地排队记录 / 模拟等待」；`?debug=1` 时额外显示 `jobId` / `runId` / `phaseSource` / `source` / `manifestUrl`
+- 本仓 workflow 通过 `quant_bridge.sh` 在**执行期**写 phase（checkout / pre / mark analyze / finish）；成功强制写 `metrics.json`。升级说明见 [quant-upstream-upgrade.md](./quant-upstream-upgrade.md)
+- 失败/超时时保留 `jobId` 恢复入口；debug 模式下可看 `actionsUrl`、`manifestUrl`
 
 ### 4.3 任务恢复
 
 - URL：`quant.html?jobId=xxx` 为恢复入口（刷新自动续查）
 - localStorage：`quant_recent_jobs_v1` 最近最多 8 条
 - 无 URL 时显示「继续查看上次任务」
+- 超时后可点「手动重新拉取结果」；URL 中的 `jobId` 始终可用于稍后回来继续查看
 
 ---
 
@@ -153,15 +159,23 @@ GET https://f.nhm.net.cn/get-stock-result?jobId={jobId}
 
 ---
 
-## 6. GitHub Actions：参数解析与发布结果
+## 6. GitHub Actions：本仓编排与发布结果
 
-### 6.1 quant_params 解析（「执行股票分析」步骤）
+### 6.1 编排流程（路径 3）
 
-`workflow_dispatch` 已含 `job_id`、`mode`、`quant_params`、`force_run`。扩展参数在分析步骤 env 注入后解析。
+Workflow：[.github/workflows/quant-stock-analysis.yml](../.github/workflows/quant-stock-analysis.yml)
+
+1. checkout 本仓（胶水脚本）+ checkout 上游到 `analysis/`
+2. 安装上游依赖 → `run_quant_analysis.sh` 解析 `quant_params` 并跑 `main.py`
+3. `quant_bridge.sh` 写 phase / 终态到本仓 `analysis-results`
+
+`workflow_dispatch` inputs：`stock_symbol`、`job_id`、`mode`、`quant_params`、`force_run`、可选 `upstream_ref`。
 
 ### 6.2 发布结果与 phase 约定
 
-同步脚本只写 GitHub，**不再 POST uniCloud**。
+同步脚本只写本仓 GitHub，**不再 POST uniCloud**。  
+发布脚本：[scripts/push_unicloud_result.py](../scripts/push_unicloud_result.py)。  
+运行入口：[scripts/run_quant_analysis.sh](../scripts/run_quant_analysis.sh)。
 
 产物：
 
@@ -169,9 +183,30 @@ GET https://f.nhm.net.cn/get-stock-result?jobId={jobId}
 jobs/{jobId}/report.md
 jobs/{jobId}/market_review.md
 jobs/{jobId}/manifest.json
-jobs/{jobId}/metrics.json          # 可选
-docs/{SYMBOL}/latest.json         # 可选索引
-docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
+jobs/{jobId}/metrics.json          # 成功强制（缺则启发式生成）
+docs/{SYMBOL}/latest.json         # 最新索引
+docs/{SYMBOL}/history.json        # 历史摘要（最近 20 次）
+```
+
+#### 中途更新 phase（真实进度）
+
+`quant-stock-analysis.yml` 在 checkout / pre / analyze / finish 调用胶水写 phase。  
+也可手工调用（只写 manifest，不声明报告正文）：
+
+```bash
+python scripts/push_unicloud_result.py \
+  --phase fetch \
+  --phase-message "正在拉取行情与市场数据…（通常约 30–90 秒）"
+# phase: queued | checkout | setup | fetch | analyze | publish
+```
+
+终态发布（成功强制 metrics；失败写 failed manifest）：
+
+```bash
+python scripts/push_unicloud_result.py --status succeeded --phase succeeded
+# 或失败：
+python scripts/push_unicloud_result.py --status failed --phase failed \
+  --error "分析失败原因" --error-code ANALYSIS_FAILED
 ```
 
 #### manifest.json 推荐字段
@@ -187,13 +222,20 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
   "generatedAt": 0,
   "finishedAt": 0,
   "runId": "1234567890",
+  "reportLength": 0,
+  "reportSha": "",
+  "marketReviewLength": 0,
+  "marketReviewSha": "",
+  "metricsLength": 0,
+  "metricsSha": "",
+  "hasMetrics": false,
   "error": "",
   "errorCode": ""
 }
 ```
 
 `phase` 枚举：`queued | checkout | setup | fetch | analyze | publish | succeeded | failed`。  
-终态时 `status` 为 `succeeded` / `failed` / `timeout`，并写齐 `report.md`（及可选 `market_review.md`、`metrics.json`）。
+终态时 `status` 为 `succeeded` / `failed` / `timeout`，并写齐 `report.md`、`metrics.json`（及可选 `market_review.md`），同时填入 `reportLength` / `reportSha` / `hasMetrics` 等。
 
 #### metrics.json 推荐字段
 
@@ -212,7 +254,7 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
 }
 ```
 
-> 分析仓库侧若尚未写出 `phase` / `metrics.json` / `history.json`，本站前端与云函数会降级：无 phase 用虚拟进度，无 metrics 只显示 Markdown，无 history 隐藏历史面板。
+> 若某次 run 仍无 `github-manifest`，前端降级为受限虚拟进度（推进至「大模型综合研判」并缓行，上限约 68%）；无 history 时隐藏历史面板。
 
 ---
 
@@ -226,8 +268,13 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
 - 仅一份报告 → 按 manifest 期望判断；stocks-only 无复盘不算 `PARTIAL_RESULT`
 - 读到成功终态且正文非空后，回写 DB 成功结果缓存（`report` / `marketReview` / `metrics` / sha / 时间）；GitHub 仍是权威源，DB 仅用于同 `jobId` 二次打开加速
 - 读取 GitHub 时按 manifest 跳过未声明的可选文件（如无复盘声明则不读 `market_review.md`），减少可选文件缺失导致的等待
-- 响应扩展字段：`phase`、`phaseMessage`、`updatedAt`、`runId`、`actionsUrl`、`errorCode`、`metrics`、`resultFiles`
+- 响应扩展字段：`phase`、`phaseMessage`、`phaseSource`、`updatedAt`、`runId`、`actionsUrl`、`errorCode`、`metrics`、`resultFiles`
 - `source`：`github-job` | `db-cache` | `db` | `pending`
+- **`phaseSource` 语义**（前端真实进度闸门）：
+  - `github-manifest`：读到 GitHub `jobs/{jobId}/manifest.json`，可驱动真实阶段
+  - `db-cache`：命中本地成功正文缓存（终态）
+  - `db`：仅有触发侧 DB 记录（常见 `queued` 占位），**不是**真实 Runner 阶段
+  - `pending`：DB 与 GitHub 均无产物
 
 ---
 
@@ -241,7 +288,7 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
 | CDN 导致假排队 | 新文件优先 Contents API；CDN 仅作第三兜底 |
 | raw 超时误判 EMPTY_REPORT | manifest 有 reportLength/sha 时改为 FETCH_FAILED 并继续轮询 |
 | 公网刷 Actions | DB 限流 + 日配额 + fingerprint 去重 |
-| 进度体验 | phase 驱动；无 phase 时虚拟进度兜底 |
+| 进度体验 | 仅 `phaseSource=github-manifest` 驱动真实阶段；DB/pending 用受限虚拟进度 + 明确状态来源 |
 | 库膨胀 | 只缓存成功结果正文；若后续报告明显变大，再迁移到 uniCloud 云存储 |
 
 ---
@@ -263,8 +310,9 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
 ### 回滚 / 降级
 
 - 限流异常：可临时改云函数跳过 `checkPersistentRateLimit`（保留内存或直接放行）。
-- 去重误伤：前端勾选「重新跑一次」(`forceRun=true`)。
-- phase/metrics 未就绪：前端自动降级，无需回滚。
+- 去重误伤：默认已是 `forceRun=true`；若被复用可确认「重新分析」仍勾选。
+- phase/metrics 未就绪：前端自动降级为受限虚拟进度，无需回滚。
+- 旧前端不认识 `phaseSource`：仍可读 `phase`/`source`；建议尽快部署新版 `quant.js` 以避免 DB `queued` 误接管。
 - 读取策略回退：仅在确认 raw 不可达时再启用 CDN 兜底（`allowCdn`）。
 
 ---
@@ -288,5 +336,6 @@ docs/{SYMBOL}/history.json        # 可选历史（最近 N 次）
 ## 11. 相关链接
 
 - 线上：https://nhm.net.cn/quant.html
-- 分析仓库：https://github.com/king08723/daily_stock_analysis
-- 任务示例：`.../analysis-results/jobs/{jobId}/manifest.json`
+- 编排仓库：https://github.com/king08723/mhm_net_cn
+- 上游源码：https://github.com/king08723/daily_stock_analysis
+- 任务示例：`https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/jobs/{jobId}/manifest.json`
