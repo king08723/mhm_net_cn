@@ -1,0 +1,17 @@
+{
+  "symbol": "TSLA",
+  "updatedAt": 1785602127504,
+  "jobs": [
+    {
+      "jobId": "job_msalbha3_a659965bb5f2",
+      "symbol": "TSLA",
+      "generatedAt": 1785602121457,
+      "runId": "30708383099",
+      "status": "succeeded",
+      "rating": "观望",
+      "riskLevel": "中",
+      "trend": "偏空",
+      "confidence": 0.55
+    }
+  ]
+}
