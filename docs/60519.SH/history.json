@@ -1,0 +1,17 @@
+{
+  "symbol": "60519.SH",
+  "updatedAt": 1785608242673,
+  "jobs": [
+    {
+      "jobId": "job_msaox04m_b0b61e574471",
+      "symbol": "60519.SH",
+      "generatedAt": 1785608236884,
+      "runId": "30712052881",
+      "status": "succeeded",
+      "rating": "观望",
+      "riskLevel": "中",
+      "trend": "震荡",
+      "confidence": 0.55
+    }
+  ]
+}
