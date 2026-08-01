@@ -1,6 +1,6 @@
 {
   "symbol": "00981.HK",
-  "updatedAt": 1785597019577,
+  "updatedAt": 1785597682341,
   "jobs": [
     {
       "jobId": "job_msai7eid_5a4ea69fffd2",
@@ -8,9 +8,9 @@
       "generatedAt": 1785597013639,
       "runId": "30705169655",
       "status": "succeeded",
-      "rating": "买入",
+      "rating": "卖出",
       "riskLevel": "中",
-      "trend": "震荡",
+      "trend": "偏空",
       "confidence": 0.55
     }
   ]
