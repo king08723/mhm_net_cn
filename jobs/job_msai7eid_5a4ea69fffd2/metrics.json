@@ -1,7 +1,7 @@
 {
-  "rating": "买入",
+  "rating": "卖出",
   "confidence": 0.55,
-  "trend": "震荡",
+  "trend": "偏空",
   "supportLevels": [
     60.0
   ],
@@ -10,7 +10,7 @@
   ],
   "riskLevel": "中",
   "dataAsOf": 1785597013639,
-  "modelVersion": "report-heuristic-v1",
+  "modelVersion": "report-heuristic-v2",
   "realtimeEnabled": false,
   "degradedFeatures": [],
   "symbol": "00981.HK",
