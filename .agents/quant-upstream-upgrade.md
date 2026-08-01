@@ -31,31 +31,34 @@
 3. 冒烟：quant 页触发 → `phaseSource=github-manifest` → 成功有 `metrics.json`
 4. 结果路径：`https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/jobs/{jobId}/manifest.json`
 
-## Secrets / Variables 迁移（不必逐条重配）
+## Secrets / Variables 迁移
 
-GitHub **无法读出**已写入 Secret 的值，所以不能「从上游仓 API 自动抄到本仓」。
+GitHub **不能**让 `mhm_net_cn` 的 Actions 直接读取 `daily_stock_analysis` 里的 Secrets。  
+本仓跑分析时，必须在 **本仓 Settings** 再有一份配置。
 
-**推荐（一条搞定）**：
+### 你这种「只在 GitHub Settings 里配过、没有本地 .env」的情况
 
-1. 找到上游本地 `.env`（或对照原仓 Secrets 名称拼一份仍在用的 `.env`）
-2. 一键写入本仓：
+打开两个页面对照：
 
-```bash
-bash scripts/sync_quant_env_secret.sh /path/to/daily_stock_analysis/.env
-```
+1. 旧仓：https://github.com/king08723/daily_stock_analysis/settings/secrets/actions  
+2. 新仓：https://github.com/king08723/mhm_net_cn/settings/secrets/actions  
 
-这会设置本仓 Secret `QUANT_ENV_B64`；workflow 启动时由 `inject_quant_env.sh` 注入，**无需**把几十个 Key 在本仓再配一遍。
+对旧仓里**你实际添加的那约 26 项**：
 
-**更省**：`.env` 里其实只需你真正在用的几项（常见：LLM Key + 可选 Tushare/邮件）。上游 workflow 里那一长串大多是可选兜底。
+| 类型 | 怎么迁 |
+|------|--------|
+| **Variables** | 值可见 → 在新仓同名新建，直接复制粘贴 |
+| **Secrets** | 值不可见、也无法导出 → 用你当初申请 Key 的地方（Gemini / AIHubMix / Tushare…）再贴一次到新仓**同名** Secret |
 
-可选 Variables：
+workflow 已按旧仓同名映射；**没配的项就是空，不用刻意凑齐上游 YAML 里那上百个名字**。  
+若旧仓还用了 Environment（例如 `STOCK_LIST`），也要看 Environment 里有没有额外变量。
 
-- `UPSTREAM_REPO`（默认 `king08723/daily_stock_analysis`）
-- `UPSTREAM_REF`（默认 `main`）
-- `UPSTREAM_CHECKOUT_TOKEN`（上游私有时需要）
-- `ANALYSIS_TIMEOUT_MINUTES`（默认 `30`）
+### 可选：一条 QUANT_ENV_B64
 
-PAT（uniCloud `GITHUB_PAT`）需对 **`mhm_net_cn`** 具备 `actions:write` + 读结果所需权限。
+若你后来自己整理出一份 `KEY=VALUE` 文件，也可用 `scripts/sync_quant_env_secret.sh` 写成一条 Secret；与逐条配置可并存。
+
+可选 Variables：`UPSTREAM_REPO` / `UPSTREAM_REF` / `ANALYSIS_TIMEOUT_MINUTES`。  
+uniCloud `GITHUB_PAT` 需对 **`mhm_net_cn`** 有 `actions:write`。
 
 ## 契约（勿破坏）
 
