@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msbay6k5_f2e09b5be1bc",
+  "symbol": "FUTU,02357.HK",
+  "generatedAt": 1785645393320,
+  "runId": "30732497595",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "持有",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msbay6k5_f2e09b5be1bc/report.md",
+    "marketReview": "jobs/job_msbay6k5_f2e09b5be1bc/market_review.md",
+    "manifest": "jobs/job_msbay6k5_f2e09b5be1bc/manifest.json",
+    "metrics": "jobs/job_msbay6k5_f2e09b5be1bc/metrics.json"
+  }
+}
