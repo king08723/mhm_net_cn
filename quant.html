@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-nav="quant">
 
 <head>
   <meta charset="utf-8" />
@@ -14,415 +14,112 @@
   <meta property="og:description" content="输入股票代码，云端大模型自动生成投研分析报告。非投资建议，仅供研究参考。" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://nhm.net.cn/quant.html" />
-  <meta property="og:image" content="https://placehold.co/1200x630?text=AI+Quant+Research" />
+  <meta property="og:image" content="https://nhm.net.cn/assets/og-quant.svg" />
   <meta property="og:site_name" content="NingHuoMing" />
+  <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
 
-  <!-- 过滤 Tailwind Play CDN 的生产环境提示警告 -->
-  <script>
-    (function() {
-      const origWarn = console.warn;
-      console.warn = function(...args) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com should not be used in production')) {
-          return;
-        }
-        origWarn.apply(console, args);
-      };
-    })();
-  </script>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-    crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <!-- 自定义动效样式 -->
-  <link rel="stylesheet" href="css/style.css" />
-  <!-- Marked.js Markdown 解析器 -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <!-- DOMPurify：Markdown 渲染后消毒，避免注入 HTML -->
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <!-- 提前提醒浏览器建立云函数 / 同源关键资源连接 -->
+  <link rel="dns-prefetch" href="https://f.nhm.net.cn" />
+  <link rel="preconnect" href="https://f.nhm.net.cn" crossorigin />
+  <link rel="modulepreload" href="js/quant.bundle.js?v=20260802-perf1" />
 
-  <style>
-    /* ===== 进度面板专属样式 ===== */
-
-    /* 整体进度面板淡入 */
-    #progress-panel {
-      animation: fadeSlideIn 0.4s ease both;
-    }
-
-    @keyframes fadeSlideIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* 进度条填充动画 */
-    #progress-bar-fill {
-      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* 进度步骤脉冲光圈 */
-    .step-pulse-ring {
-      position: absolute;
-      inset: -4px;
-      border-radius: 50%;
-      border: 2px solid currentColor;
-      opacity: 0;
-      animation: pulseRing 1.6s ease-out infinite;
-    }
-
-    @keyframes pulseRing {
-      0% {
-        opacity: 0.6;
-        transform: scale(1);
-      }
-
-      100% {
-        opacity: 0;
-        transform: scale(1.8);
-      }
-    }
-
-    /* ===== Markdown 报告精细排版样式 ===== */
-    .markdown-body {
-      color: #e2e8f0;
-      font-size: 0.9375rem;
-      line-height: 1.75;
-    }
-
-    .markdown-body h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-top: 1.5rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .markdown-body h2 {
-      font-size: 1.3rem;
-      font-weight: 600;
-      color: #93c5fd;
-      margin-top: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
-
-    .markdown-body h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #60a5fa;
-      margin-top: 1.25rem;
-      margin-bottom: 0.5rem;
-    }
-
-    .markdown-body p {
-      margin-bottom: 1rem;
-    }
-
-    .markdown-body ul, .markdown-body ol {
-      margin-bottom: 1rem;
-      padding-left: 1.5rem;
-    }
-
-    .markdown-body ul {
-      list-style-type: disc;
-    }
-
-    .markdown-body ol {
-      list-style-type: decimal;
-    }
-
-    .markdown-body li {
-      margin-bottom: 0.35rem;
-    }
-
-    .markdown-body blockquote {
-      border-left: 4px solid #3b82f6;
-      background: rgba(59, 130, 246, 0.08);
-      padding: 0.75rem 1rem;
-      border-radius: 0 0.5rem 0.5rem 0;
-      margin-bottom: 1rem;
-      color: #93c5fd;
-    }
-
-    .markdown-body table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 1.25rem;
-      font-size: 0.875rem;
-      overflow-x: auto;
-      display: block;
-    }
-
-    .markdown-body th, .markdown-body td {
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 0.6rem 0.85rem;
-      text-align: left;
-    }
-
-    .markdown-body th {
-      background: rgba(255, 255, 255, 0.06);
-      color: #93c5fd;
-      font-weight: 600;
-    }
-
-    .markdown-body tr:nth-child(even) {
-      background: rgba(255, 255, 255, 0.02);
-    }
-
-    .markdown-body code {
-      background: rgba(255, 255, 255, 0.1);
-      color: #f43f5e;
-      padding: 0.15rem 0.4rem;
-      border-radius: 0.25rem;
-      font-family: monospace;
-      font-size: 0.875em;
-    }
-
-    .markdown-body pre {
-      background: #06111d;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 1rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
-      margin-bottom: 1rem;
-    }
-
-    .markdown-body pre code {
-      background: transparent;
-      color: #cbd5e1;
-      padding: 0;
-    }
-
-    .markdown-body hr {
-      border: 0;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.1);
-      margin: 1.5rem 0;
-    }
-
-    .markdown-body strong {
-      color: #38bdf8;
-    }
-
-    /* 历史分析列表 */
-    .history-list button {
-      display: block;
-      width: 100%;
-      text-align: left;
-      padding: 0.55rem 0.7rem;
-      border-radius: 0.55rem;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      color: rgba(191, 219, 254, 0.85);
-      font-size: 11px;
-      line-height: 1.45;
-      cursor: pointer;
-      transition: background 0.15s ease, border-color 0.15s ease;
-    }
-    .history-list button:hover {
-      background: rgba(56, 189, 248, 0.1);
-      border-color: rgba(56, 189, 248, 0.28);
-    }
-    .history-list button.is-current {
-      background: rgba(56, 189, 248, 0.12);
-      border-color: rgba(56, 189, 248, 0.4);
-    }
-    .history-list .hist-title {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: baseline;
-      gap: 0.35rem 0.55rem;
-      color: #e0f2fe;
-      font-weight: 500;
-    }
-    .history-list .hist-meta {
-      margin-top: 0.2rem;
-      color: rgba(147, 197, 253, 0.65);
-    }
-    .history-list .hist-badge {
-      display: inline-block;
-      padding: 0.05rem 0.4rem;
-      border-radius: 999px;
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      color: #7dd3fc;
-      font-size: 10px;
-    }
-
-    /* 报告 Tab：大气明显，一眼能辨 */
-    .report-tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      padding: 0.5rem;
-      border-radius: 1.1rem;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .report-tabs button {
-      appearance: none;
-      border: 1px solid transparent;
-      background: transparent;
-      color: rgba(191, 219, 254, 0.78);
-      cursor: pointer;
-      border-radius: 0.85rem;
-      padding: 1rem 1.45rem;
-      min-height: 3.75rem;
-      min-width: 7.5rem;
-      font-size: 1.05rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      line-height: 1.25;
-      text-align: left;
-      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-    }
-
-    .report-tabs button .tab-code {
-      display: block;
-      margin-top: 0.2rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      opacity: 0.75;
-      letter-spacing: 0.05em;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    }
-
-    .report-tabs button:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .report-tabs button[aria-selected="true"] {
-      color: #fff;
-      background: linear-gradient(135deg, rgba(14, 165, 233, 0.35), rgba(59, 130, 246, 0.28));
-      border-color: rgba(125, 211, 252, 0.55);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.18), 0 8px 24px rgba(14, 165, 233, 0.12);
-    }
-
-    .report-panels {
-      min-height: 0;
-      flex: 1;
-    }
-
-    .report-pane[hidden] {
-      display: none !important;
-    }
-  </style>
+  <!-- 量化页静态 Tailwind 产物（勿用 Play CDN） -->
+  <link rel="stylesheet" href="css/site.css?v=20260802-perf1" />
 </head>
 
 <body class="min-h-screen flex flex-col bg-gradient-to-br from-[#0b1e33] via-[#102a43] to-[#081624] text-white">
-  <!-- 统一导航栏 -->
-  <header class="sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
-    <nav class="container mx-auto px-4 py-3">
-      <!-- 顶栏一行：Logo + 桌面菜单 / 汉堡按钮（下拉菜单必须放在此行外，否则手机展开会被横向 flex 挤没） -->
-      <div class="flex items-center justify-between">
-        <a href="./index.html" class="flex items-center gap-3">
-          <img src="https://placehold.co/48x48?text=N" alt="Logo" class="rounded-md" />
-          <div class="leading-tight">
-            <span class="font-semibold text-lg">宁火明</span>
-            <span class="block text-sm text-blue-300">NingHuoMing</span>
-          </div>
-        </a>
-
-        <div class="hidden md:flex items-center gap-6">
-          <a href="./index.html" class="hover:text-blue-300 transition-colors">首页</a>
-          <a href="./services.html" class="hover:text-blue-300 transition-colors">服务与方案</a>
-          <a href="./portfolio.html" class="hover:text-blue-300 transition-colors">案例展示</a>
-          <a href="./quant.html" class="text-blue-400 font-semibold border-b-2 border-blue-400 pb-1">量化系统</a>
-          <a href="./contact.html" class="hover:text-blue-300 transition-colors">联系与关于</a>
+  <!-- inject:header:start -->
+<!-- 全站统一页眉；由 scripts/inject_partials.js 注入，{{NAV_*}} 为当前页高亮占位 -->
+<header class="site-header sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
+  <nav class="container mx-auto px-4 py-3">
+    <div class="flex items-center justify-between">
+      <a href="./index.html" class="flex items-center gap-3">
+        <img src="./assets/logo.svg" alt="宁火明" width="48" height="48" class="rounded-md" />
+        <div class="leading-tight">
+          <span class="font-semibold text-lg">宁火明</span>
+          <span class="block text-sm text-blue-300">NingHuoMing</span>
         </div>
+      </a>
 
-        <button id="mobile-menu-btn" type="button"
-          class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
-          aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
-          <i class="fa-solid fa-bars"></i>
-        </button>
+      <div class="hidden md:flex items-center gap-6">
+        <a href="./index.html" class="hover:text-blue-300 transition-colors">首页</a>
+        <a href="./services.html" class="hover:text-blue-300 transition-colors">服务与方案</a>
+        <a href="./portfolio.html" class="hover:text-blue-300 transition-colors">案例展示</a>
+        <a href="./quant.html" class="text-blue-400 font-semibold border-b-2 border-blue-400 pb-1">量化系统</a>
+        <a href="./contact.html" class="hover:text-blue-300 transition-colors">联系与关于</a>
       </div>
 
-      <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
-        <div class="flex flex-col gap-4 mt-4">
-          <a href="./index.html"
-            class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">首页</a>
-          <a href="./services.html"
-            class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">服务与方案</a>
-          <a href="./portfolio.html"
-            class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">案例展示</a>
-          <a href="./quant.html" class="block py-2 text-blue-400 font-semibold bg-white/5 rounded-lg px-4">量化系统</a>
-          <a href="./contact.html"
-            class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">联系与关于</a>
-        </div>
+      <button id="mobile-menu-btn" type="button"
+        class="mobile-menu-btn md:hidden text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
+        aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
+        <svg class="qi menu-icon-open" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <svg class="qi menu-icon-close hidden" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+        <span class="menu-btn-fallback sr-only">菜单</span>
+      </button>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
+      <div class="flex flex-col gap-4 mt-4">
+        <a href="./index.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">首页</a>
+        <a href="./services.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">服务与方案</a>
+        <a href="./portfolio.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">案例展示</a>
+        <a href="./quant.html" class="block py-2 rounded-lg px-4 text-blue-400 font-semibold bg-white/5">量化系统</a>
+        <a href="./contact.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">联系与关于</a>
+        <a href="./contact.html#contact-form"
+          class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium">预约咨询</a>
       </div>
-    </nav>
-  </header>
+    </div>
+  </nav>
+  
+</header>
+<!-- inject:header:end -->
 
   <main class="flex-1 flex flex-col p-4 md:p-6 container mx-auto h-full">
-    <!-- 首屏：AI 投研营销 + 分析工具 -->
-    <div class="bg-white/5 border border-white/10 rounded-2xl p-6 mb-4 backdrop-blur-md shadow-xl">
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <div class="flex flex-wrap gap-2 mb-3">
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-400/30 rounded-full text-xs text-blue-300">
-              <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-              <span>云端 AI 分析引擎</span>
-            </div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-400/30 rounded-full text-xs text-emerald-300">
-              <span>实时行情增强</span>
-            </div>
-            <div class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-400/30 rounded-full text-xs text-indigo-300">
-              <span>多市场标的支持</span>
-            </div>
-          </div>
-          <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-            <i class="fa-solid fa-brain text-blue-400"></i>
-            AI 量化投研分析
-          </h1>
+    <!-- 首屏：品牌 + 输入主路径 -->
+    <div id="tool-hero"
+      class="bg-white/5 border border-white/10 rounded-2xl p-5 md:p-6 mb-4 backdrop-blur-md sticky top-[3.25rem] z-40">
+      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-5">
+        <div class="min-w-0">
+          <p class="text-xs tracking-wide text-sky-300/80 mb-1">宁火明 · 量化系统</p>
+          <h1 class="text-2xl md:text-3xl font-bold text-white">AI 量化投研分析</h1>
           <p class="mt-2 text-sm text-blue-200 max-w-xl">
-            输入股票代码，自动整合行情、技术指标、市场环境与大模型推理，生成研究报告。
+            输入股票代码，整合行情、技术指标与大模型推理，生成可复盘研究报告。
           </p>
-          <p class="mt-2 text-[11px] text-amber-200/70">
-            非投资建议，仅供研究与学习参考。AI 分析可能存在偏差，请结合自身判断。
-          </p>
+          <p class="mt-1.5 text-[11px] text-amber-200/70">非投资建议，仅供研究参考。</p>
         </div>
 
-        <div class="w-full md:w-[520px]">
-          <!-- 股票代码输入提交卡片 -->
+        <div class="w-full lg:w-[540px]">
           <div
-            class="bg-[#081624]/90 border border-blue-500/30 p-2 rounded-xl flex flex-col sm:flex-row items-center gap-2 shadow-2xl">
+            class="bg-[#081624]/90 border border-blue-500/30 p-2 rounded-xl flex flex-col sm:flex-row items-center gap-2">
             <div class="relative w-full">
-              <i class="fa-solid fa-chart-line absolute left-3 top-1/2 -translate-y-1/2 text-blue-400"></i>
+              <svg class="qi absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" viewBox="0 0 24 24" width="16"
+                height="16" aria-hidden="true">
+                <path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6" />
+              </svg>
               <input type="text" id="symbol-input" placeholder="例: 00700.HK, AAPL, 600519.SH（可逗号分隔）"
-                class="w-full bg-transparent pl-9 pr-3 py-2 text-sm text-white placeholder-blue-300/40 focus:outline-none font-mono" />
-              <!-- 输入错误提示 -->
+                class="w-full bg-transparent pl-9 pr-3 py-2 text-sm text-white placeholder-blue-300/40 focus:outline-none font-mono"
+                autocomplete="off" />
               <div id="input-hint"
                 class="absolute left-0 -bottom-5 text-xs text-red-400 opacity-0 transition-opacity duration-300 whitespace-nowrap">
               </div>
             </div>
             <button id="btn-analyze" type="button"
-              class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer whitespace-nowrap min-w-[140px]">
-              <!-- cooldown 遮罩层 -->
-              <span class="cooldown-sweep hidden" id="cooldown-sweep"></span>
-              <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 relative z-10" id="btn-icon"></i>
+              class="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold text-sm px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer whitespace-nowrap min-w-[140px]"
+              aria-busy="false">
+              <span id="btn-icon" class="relative z-10 text-yellow-300 inline-flex" aria-hidden="true"></span>
               <span class="relative z-10" id="btn-label">生成 AI 分析报告</span>
             </button>
           </div>
-          <p class="mt-1.5 text-[11px] text-blue-300/50 px-1">支持 A 股 / 港股 / 美股代码，可一次输入多个标的</p>
+          <p class="mt-1.5 text-[11px] text-blue-300/50 px-1">支持 A 股 / 港股 / 美股，可一次输入多个标的</p>
 
-          <!-- 分析参数：常用项 + 可展开的高级增强开关 -->
           <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
             <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80">
               <span class="block mb-1 text-[11px] text-blue-300/60">模式</span>
-              <select id="mode-select"
-                class="w-full bg-transparent text-white focus:outline-none cursor-pointer">
+              <select id="mode-select" class="w-full bg-transparent text-white focus:outline-none cursor-pointer">
                 <option value="stocks-only" selected>仅个股</option>
                 <option value="full">个股 + 大盘</option>
                 <option value="market-only">仅大盘</option>
@@ -430,8 +127,7 @@
             </label>
             <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80">
               <span class="block mb-1 text-[11px] text-blue-300/60">报告</span>
-              <select id="report-type-select"
-                class="w-full bg-transparent text-white focus:outline-none cursor-pointer">
+              <select id="report-type-select" class="w-full bg-transparent text-white focus:outline-none cursor-pointer">
                 <option value="brief">简报</option>
                 <option value="simple" selected>标准</option>
                 <option value="full">完整</option>
@@ -453,26 +149,31 @@
               class="text-sky-300 hover:text-white underline underline-offset-2 cursor-pointer bg-transparent border-0 p-0">
               高级选项
             </button>
-            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none">
-              <input type="checkbox" id="force-run-checkbox" class="accent-blue-500" checked />
-              <span>重新分析（忽略近期缓存）</span>
-            </label>
           </div>
 
           <div id="advanced-options" class="hidden mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
-            <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
+            <label
+              class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer col-span-2 lg:col-span-4">
+              <input type="checkbox" id="force-run-checkbox" class="accent-blue-500" checked />
+              <span>重新分析（忽略近期缓存）</span>
+            </label>
+            <label
+              class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" id="opt-market-context" class="accent-blue-500" checked />
               <span>市场上下文</span>
             </label>
-            <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
+            <label
+              class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" id="opt-realtime-quote" class="accent-blue-500" checked />
               <span>实时行情</span>
             </label>
-            <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
+            <label
+              class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" id="opt-realtime-tech" class="accent-blue-500" checked />
               <span>实时技术指标</span>
             </label>
-            <label class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
+            <label
+              class="bg-[#081624]/70 border border-white/10 rounded-lg px-2.5 py-2 text-blue-200/80 inline-flex items-center gap-2 cursor-pointer">
               <input type="checkbox" id="opt-chip-dist" class="accent-blue-500" checked />
               <span>筹码分布</span>
             </label>
@@ -484,281 +185,202 @@
       </div>
     </div>
 
-    <!-- ======================================================= -->
-    <!-- 进度状态面板（默认隐藏，点击分析后由 JS 显示）              -->
-    <!-- ======================================================= -->
-    <div id="progress-panel" style="display:none" class="mb-4">
-      <div class="bg-[#0d2137]/90 border border-blue-500/25 rounded-2xl p-5 backdrop-blur-md shadow-2xl">
-
-        <!-- 顶部：目标股票 + 总体状态 + 已用时间 -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
+    <!-- 进度状态面板 -->
+    <div id="progress-panel" style="display:none" class="mb-4" aria-live="polite">
+      <div class="bg-[#0d2137]/90 border border-blue-500/25 rounded-2xl p-5 backdrop-blur-md">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div class="flex items-center gap-3">
             <div id="panel-icon-wrap"
               class="relative w-10 h-10 flex items-center justify-center rounded-full bg-blue-500/15 border border-blue-400/30 text-blue-400 text-base">
-              <i id="panel-icon" class="fa-solid fa-circle-notch fa-spin"></i>
+              <span id="panel-icon" class="qi-host" aria-hidden="true"></span>
             </div>
             <div>
               <div class="text-xs text-blue-300/70 mb-0.5">正在分析</div>
               <div class="text-base font-bold text-white font-mono tracking-wide" id="panel-symbol">--</div>
             </div>
           </div>
-          <div class="flex items-center gap-4 text-xs">
+          <div class="flex items-center gap-3 text-xs">
             <div class="flex items-center gap-1.5 text-blue-300/80">
-              <i class="fa-solid fa-clock text-blue-400/60"></i>
               <span>已用时</span>
               <span class="font-mono font-semibold text-white tabular-nums" id="panel-elapsed">00:00</span>
             </div>
-            <div class="px-2.5 py-1 rounded-full text-xs font-medium border" id="panel-badge">
-              <!-- 动态注入 -->
+            <div class="px-2.5 py-1 rounded-full text-xs font-medium border" id="panel-badge"></div>
+            <button type="button" id="btn-toggle-progress"
+              class="text-[11px] text-sky-300 hover:text-white underline underline-offset-2 bg-transparent border-0 p-0 cursor-pointer hidden">
+              收起详情
+            </button>
+          </div>
+        </div>
+
+        <div id="progress-details">
+          <div class="mb-5">
+            <div class="flex justify-between text-xs text-blue-300/60 mb-1.5">
+              <span id="progress-label">预估进度</span>
+              <span id="progress-pct" class="font-mono text-blue-300">约 0%</span>
+            </div>
+            <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+              <div id="progress-bar-fill"
+                class="h-full rounded-full bg-gradient-to-r from-blue-500 via-sky-500 to-blue-400" style="width: 0%">
+              </div>
+            </div>
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-blue-300/50">
+              <span id="panel-phase-source" class="hidden" aria-hidden="true"></span>
+              <span id="panel-debug-info" class="hidden font-mono break-all opacity-80"></span>
             </div>
           </div>
+
+          <div class="relative" id="steps-container"></div>
         </div>
 
-        <!-- 总进度条：有云端阶段时显示阶段名，否则显示预估进度 -->
-        <div class="mb-5">
-          <div class="flex justify-between text-xs text-blue-300/60 mb-1.5">
-            <span id="progress-label">预估进度</span>
-            <span id="progress-pct" class="font-mono text-blue-300">约 0%</span>
-          </div>
-          <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-            <div id="progress-bar-fill"
-              class="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-400" style="width: 0%">
-            </div>
-          </div>
-          <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-blue-300/50">
-            <span id="panel-phase-source" class="hidden" aria-hidden="true"></span>
-            <span id="panel-debug-info" class="hidden font-mono break-all opacity-80"></span>
-          </div>
-        </div>
-
-        <!-- 步骤时间线 -->
-        <div class="relative" id="steps-container">
-          <!-- 步骤由 JS 动态注入 -->
-        </div>
-
-        <!-- 底部：当前操作描述 + 错误/完成信息 -->
         <div id="panel-message"
-          class="mt-4 text-xs text-blue-200/70 bg-white/3 border border-white/5 rounded-lg px-3 py-2 min-h-[2rem] leading-relaxed">
+          class="mt-4 text-xs text-blue-200/70 bg-white/5 border border-white/5 rounded-lg px-3 py-2 min-h-[2rem] leading-relaxed"
+          aria-live="polite">
           正在准备…
         </div>
       </div>
     </div>
 
-    <!-- 本机分析流水：此前在本浏览器发起的分析任务，可点开回看 -->
-    <div id="history-panel" class="hidden mb-4">
-      <div class="bg-[#0d2137]/90 border border-blue-500/25 rounded-2xl p-4 backdrop-blur-md shadow-xl">
-        <div class="flex items-center justify-between gap-3 mb-2">
+    <!-- 本机分析流水：标题栏切换，行内按钮回看 -->
+    <div id="history-panel" class="hidden mb-4" aria-expanded="false">
+      <div class="bg-[#0d2137]/90 border border-blue-500/25 rounded-2xl p-4 backdrop-blur-md">
+        <button type="button" id="btn-toggle-history-bar"
+          class="w-full flex items-center justify-between gap-3 text-left bg-transparent border-0 p-0 cursor-pointer text-inherit">
           <div class="min-w-0 flex items-baseline gap-2 flex-wrap">
             <span class="text-sm font-semibold text-white">分析流水</span>
             <span id="history-symbol" class="text-xs text-sky-300/80">本机最近记录</span>
             <span id="history-count" class="text-[11px] text-blue-300/60"></span>
           </div>
-          <button type="button" id="btn-toggle-history"
-            class="text-[11px] text-sky-300 hover:text-white cursor-pointer bg-transparent border-0 p-0 shrink-0">收起</button>
-        </div>
-        <div id="history-list" class="history-list space-y-1.5 max-h-56 overflow-y-auto pr-1"></div>
-        <p id="history-empty" class="hidden text-xs text-blue-300/60 py-2">暂无分析记录。完成一次分析后会出现在这里（保存在本浏览器）。</p>
+          <span id="btn-toggle-history" class="text-[11px] text-sky-300 shrink-0">展开</span>
+        </button>
+        <div id="history-list" class="history-list space-y-1.5 max-h-56 overflow-y-auto pr-1 mt-2 hidden"></div>
+        <p id="history-empty" class="hidden text-xs text-blue-300/60 py-2 mt-2">暂无分析记录。完成一次分析后会出现在这里（保存在本浏览器）。</p>
       </div>
     </div>
 
-    <!-- 分析报告展现容器 -->
+    <!-- 分析报告 -->
     <div
-      class="flex-1 flex flex-col min-h-[460px] bg-[#081624] border border-white/10 rounded-2xl overflow-hidden p-6 shadow-2xl relative">
-      <!-- 初始/空状态引导 -->
+      class="flex-1 flex flex-col min-h-[460px] bg-[#081624] border border-white/10 rounded-2xl overflow-hidden p-6 relative">
       <div id="empty-state"
         class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#081624] p-6 text-center">
-        <div
-          class="w-16 h-16 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-          <i class="fa-solid fa-file-contract text-2xl text-blue-400"></i>
+        <div class="w-14 h-14 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3">
+          <svg class="qi text-blue-400" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">
+            <path d="M7 4h7l3 3v13H7V4zM10 11h4M10 15h4" />
+          </svg>
         </div>
-        <h3 class="text-lg font-semibold text-white mb-2">等待发起 AI 投研分析</h3>
-        <p class="text-xs text-blue-300/70 max-w-md">
-          在上方输入股票代码，点击【生成 AI 分析报告】即可开始。
-        </p>
+        <h3 class="text-base font-semibold text-white mb-1">等待发起分析</h3>
+        <p class="text-xs text-blue-300/70 max-w-sm">在上方输入股票代码，点击生成即可开始。</p>
       </div>
 
-      <!-- 报告区域：个股报告 + 市场复盘（默认隐藏） -->
       <div id="report-container" class="hidden flex-1 flex flex-col min-h-0">
-        <div class="flex items-center gap-3 pb-4 border-b border-white/10 mb-3 shrink-0 min-w-0">
-          <i class="fa-solid fa-file-lines text-blue-400 text-lg shrink-0"></i>
-          <h2 class="text-lg font-bold text-white truncate" id="report-title">AI 投研报告</h2>
+        <div class="flex items-start justify-between gap-3 pb-4 border-b border-white/10 mb-3 shrink-0 min-w-0">
+          <div class="min-w-0">
+            <h2 class="text-lg font-bold text-white truncate" id="report-title">AI 投研报告</h2>
+            <p id="report-disclaimer" class="text-[11px] text-amber-200/70 mt-1">
+              非投资建议，仅供研究参考。
+            </p>
+          </div>
+          <div id="report-toolbar" class="report-toolbar shrink-0">
+            <button type="button" id="btn-copy-report">复制全文</button>
+            <button type="button" id="btn-print-report">打印 / 导出</button>
+          </div>
         </div>
 
-        <!-- 合规提示 -->
-        <p id="report-disclaimer" class="text-[11px] text-amber-200/70 mb-2 shrink-0">
-          非投资建议，仅供研究参考。AI 分析可能存在偏差，请结合自身判断与独立研究。
-        </p>
-
-        <!-- 生成时间等（不展示底层来源） -->
         <div id="report-meta" class="hidden text-[11px] text-blue-200/70 mb-3 flex flex-wrap gap-x-4 gap-y-1 shrink-0">
           <span id="meta-generated"></span>
           <span id="meta-runid" class="opacity-80"></span>
           <span id="meta-degraded" class="text-amber-300/80"></span>
         </div>
 
-        <!-- 动态 Tab：每股一个 + 市场复盘 -->
         <div id="report-tabs" class="report-tabs hidden mb-4 shrink-0" role="tablist" aria-label="分析结果切换"></div>
-
         <div id="report-panels" class="report-panels flex-1 overflow-y-auto pr-1 min-h-0"></div>
       </div>
     </div>
 
-    <!-- ===== 营销内容区：价值 / 人群 / 流程 / 可信 / FAQ ===== -->
+    <!-- 营销内容区：减卡 -->
     <section id="marketing-sections" class="mt-8 space-y-10 pb-10">
-      <!-- 它能分析什么 -->
       <div class="animate-on-scroll">
-        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">它能分析什么</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-chart-area icon-pulse"></i><span class="font-semibold">技术趋势</span></div>
-            <p class="text-sm text-blue-100/80">结合 K 线、成交量与技术指标，梳理短期与中期走势脉络。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-arrows-up-down icon-pulse"></i><span class="font-semibold">支撑与压力</span></div>
-            <p class="text-sm text-blue-100/80">识别关键价位区间，帮助理解可能的回撤与阻力区域。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-shield-halved icon-pulse"></i><span class="font-semibold">风险等级</span></div>
-            <p class="text-sm text-blue-100/80">输出结构化风险提示，便于快速判断波动与不确定性。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-globe icon-pulse"></i><span class="font-semibold">市场环境</span></div>
-            <p class="text-sm text-blue-100/80">可选大盘与市场上下文，把个股放回整体环境中解读。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-robot icon-pulse"></i><span class="font-semibold">大模型研判</span></div>
-            <p class="text-sm text-blue-100/80">用大模型整合多维信息，生成可读的综合观点与逻辑说明。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300 mb-2"><i class="fa-solid fa-bookmark icon-pulse"></i><span class="font-semibold">任务可恢复</span></div>
-            <p class="text-sm text-blue-100/80">分析中途离开也可稍后返回继续查看，此前分析流水可回看。</p>
-          </div>
-        </div>
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-3">它能分析什么</h2>
+        <ul class="text-sm text-blue-100/85 space-y-2 max-w-2xl list-disc pl-5">
+          <li>技术趋势、支撑压力与结构化风险提示</li>
+          <li>可选大盘 / 市场上下文，把个股放回整体环境</li>
+          <li>大模型综合研判，任务可恢复、分析流水可回看</li>
+        </ul>
       </div>
 
-      <!-- 适合谁使用 -->
       <div class="animate-on-scroll">
-        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">适合谁使用</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 text-center hover-card">
-            <i class="fa-solid fa-user text-2xl text-sky-400 mb-2"></i>
-            <h3 class="font-semibold text-white text-sm mb-1">个人投资者</h3>
-            <p class="text-xs text-blue-200/70">快速拿到结构化观点，辅助独立研究。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 text-center hover-card">
-            <i class="fa-solid fa-flask text-2xl text-emerald-400 mb-2"></i>
-            <h3 class="font-semibold text-white text-sm mb-1">量化爱好者</h3>
-            <p class="text-xs text-blue-200/70">把行情与指标整理成可复盘材料。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 text-center hover-card">
-            <i class="fa-solid fa-graduation-cap text-2xl text-indigo-400 mb-2"></i>
-            <h3 class="font-semibold text-white text-sm mb-1">投研学习者</h3>
-            <p class="text-xs text-blue-200/70">学习如何从多因子角度阅读一只股票。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 text-center hover-card">
-            <i class="fa-solid fa-clock-rotate-left text-2xl text-amber-400 mb-2"></i>
-            <h3 class="font-semibold text-white text-sm mb-1">需要快速复盘的人</h3>
-            <p class="text-xs text-blue-200/70">保留历史分析，方便对比不同时点结论。</p>
-          </div>
-        </div>
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-3">适合谁使用</h2>
+        <p class="text-sm text-blue-100/80 max-w-2xl leading-relaxed">
+          个人投资者、量化爱好者、投研学习者，以及需要快速复盘、对比不同时点结论的人。
+        </p>
       </div>
 
-      <!-- AI 分析流程 -->
       <div class="animate-on-scroll">
         <h2 class="text-xl md:text-2xl font-bold text-white mb-4">AI 分析流程</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="text-blue-400 font-bold text-lg mb-1">01</div>
-            <h3 class="font-semibold text-white text-sm mb-1">输入代码</h3>
-            <p class="text-xs text-blue-200/70">填写股票代码，选择报告模式与语言。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="text-blue-400 font-bold text-lg mb-1">02</div>
-            <h3 class="font-semibold text-white text-sm mb-1">云端分析</h3>
-            <p class="text-xs text-blue-200/70">拉取行情与指标，大模型综合研判。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="text-blue-400 font-bold text-lg mb-1">03</div>
-            <h3 class="font-semibold text-white text-sm mb-1">生成报告</h3>
-            <p class="text-xs text-blue-200/70">输出观点摘要、正文与可选市场复盘。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card group">
-            <div class="text-blue-400 font-bold text-lg mb-1">04</div>
-            <h3 class="font-semibold text-white text-sm mb-1">持续复盘</h3>
-            <p class="text-xs text-blue-200/70">刷新可恢复进度，历史分析可回看。</p>
-          </div>
-        </div>
+        <ol class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+          <li class="border-l-2 border-sky-400/50 pl-3 py-1">
+            <div class="text-sky-300 font-mono text-xs mb-1">01</div>
+            <div class="font-semibold text-white">输入代码</div>
+            <p class="text-xs text-blue-200/70 mt-1">选择模式、报告与语言</p>
+          </li>
+          <li class="border-l-2 border-sky-400/50 pl-3 py-1">
+            <div class="text-sky-300 font-mono text-xs mb-1">02</div>
+            <div class="font-semibold text-white">云端分析</div>
+            <p class="text-xs text-blue-200/70 mt-1">拉取行情与指标并研判</p>
+          </li>
+          <li class="border-l-2 border-sky-400/50 pl-3 py-1">
+            <div class="text-sky-300 font-mono text-xs mb-1">03</div>
+            <div class="font-semibold text-white">生成报告</div>
+            <p class="text-xs text-blue-200/70 mt-1">观点摘要与可选市场复盘</p>
+          </li>
+          <li class="border-l-2 border-sky-400/50 pl-3 py-1">
+            <div class="text-sky-300 font-mono text-xs mb-1">04</div>
+            <div class="font-semibold text-white">持续复盘</div>
+            <p class="text-xs text-blue-200/70 mt-1">刷新可恢复，流水可回看</p>
+          </li>
+        </ol>
       </div>
 
-      <!-- 为什么可信 -->
       <div class="animate-on-scroll">
-        <h2 class="text-xl md:text-2xl font-bold text-white mb-4">为什么可信</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 flex gap-3 hover-card">
-            <i class="fa-solid fa-database text-sky-400 mt-1"></i>
-            <div>
-              <h3 class="font-semibold text-white text-sm mb-1">多源数据整合</h3>
-              <p class="text-xs text-blue-200/70">行情、技术指标与市场上下文统一进入分析链路。</p>
-            </div>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 flex gap-3 hover-card">
-            <i class="fa-solid fa-table-cells text-emerald-400 mt-1"></i>
-            <div>
-              <h3 class="font-semibold text-white text-sm mb-1">结构化指标摘要</h3>
-              <p class="text-xs text-blue-200/70">观点、风险、趋势等关键信息卡片化呈现，便于扫读。</p>
-            </div>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 flex gap-3 hover-card">
-            <i class="fa-solid fa-triangle-exclamation text-amber-400 mt-1"></i>
-            <div>
-              <h3 class="font-semibold text-white text-sm mb-1">明确风险提示</h3>
-              <p class="text-xs text-blue-200/70">全程标注非投资建议，置信度仅作模型参考。</p>
-            </div>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 flex gap-3 hover-card">
-            <i class="fa-solid fa-rotate text-indigo-400 mt-1"></i>
-            <div>
-              <h3 class="font-semibold text-white text-sm mb-1">任务可恢复</h3>
-              <p class="text-xs text-blue-200/70">分析中途离开也可稍后返回继续查看结果。</p>
-            </div>
-          </div>
-        </div>
+        <h2 class="text-xl md:text-2xl font-bold text-white mb-3">为什么可信</h2>
+        <ul class="text-sm text-blue-100/85 space-y-2 max-w-2xl list-disc pl-5">
+          <li>多源数据进入同一分析链路，输出结构化摘要便于扫读</li>
+          <li>全程标注非投资建议；置信度仅为模型参考，不是涨跌确定性</li>
+          <li>分析中途离开也可稍后返回继续查看结果</li>
+        </ul>
       </div>
 
-      <!-- 常见问题 FAQ -->
-      <div class="animate-on-scroll" id="faq">
+      <div class="animate-on-scroll quant-faq" id="faq">
         <h2 class="text-xl md:text-2xl font-bold text-white mb-4">常见问题</h2>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">这是投资建议吗？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">不是。报告仅供研究与学习参考，不构成任何买卖建议；请结合自身判断与独立研究。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">支持哪些市场？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">支持 A 股、港股、美股等常见代码格式，也可一次输入多个标的。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">生成报告大概要多久？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">通常数分钟内完成；开启实时增强或高峰时段可能更久，页面会显示分析进度。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">结果会保存吗？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">刷新页面可继续查看进行中的分析，此前分析流水也可回看。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">为什么有时会排队？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">云端算力有限，且系统有频率与日配额保护，高峰时会排队以保证服务质量。</p>
-          </div>
-          <div class="rounded-xl bg-white/5 border border-white/10 p-5 hover-card">
-            <h3 class="font-semibold text-blue-300 text-sm">置信度代表什么？</h3>
-            <p class="mt-2 text-xs text-blue-100/80">置信度是模型对输出的参考评分，并非涨跌确定性，不能作为下单依据。</p>
-          </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <details>
+            <summary>这是投资建议吗？</summary>
+            <p>不是。报告仅供研究与学习参考，不构成任何买卖建议；请结合自身判断与独立研究。</p>
+          </details>
+          <details>
+            <summary>支持哪些市场？</summary>
+            <p>支持 A 股、港股、美股等常见代码格式，也可一次输入多个标的。</p>
+          </details>
+          <details>
+            <summary>生成报告大概要多久？</summary>
+            <p>通常数分钟内完成；开启实时增强或高峰时段可能更久，页面会显示分析进度。</p>
+          </details>
+          <details>
+            <summary>结果会保存吗？</summary>
+            <p>刷新页面可继续查看进行中的分析，此前分析流水也可回看（保存在本浏览器）。</p>
+          </details>
+          <details>
+            <summary>为什么有时会排队？</summary>
+            <p>云端算力有限，且系统有频率与日配额保护，高峰时会排队以保证服务质量。</p>
+          </details>
+          <details>
+            <summary>置信度代表什么？</summary>
+            <p>置信度是模型对输出的参考评分，并非涨跌确定性，不能作为下单依据。</p>
+          </details>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- FAQPage 结构化数据，便于搜索与 AI 摘取 -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -816,11 +438,52 @@
   }
   </script>
 
-  <!-- 动效脚本 -->
-  <script src="js/script.js"></script>
-  <!-- 量化脚本 -->
-  <!-- v 参数用于穿透静态托管/CDN 对 quant.js 的旧缓存 -->
-  <script src="js/quant.js?v=20260801-forceRun"></script>
+  <!-- 导航与滚动动效；量化主逻辑为 ES module，内部按需加载 marked / DOMPurify -->
+  <!-- inject:footer:start -->
+<!-- 全站统一页脚；社交无真实链接时不输出死链 -->
+<footer class="mt-auto border-t border-white/10 bg-[#081624]">
+  <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+    <div>
+      <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
+      <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
+    </div>
+    <div>
+      <h4 class="font-semibold">快速导航</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
+        <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
+        <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
+        <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
+        <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold">联系我</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7A2 2 0 0 1 22 16.9z"/></svg>
+          <span id="contact-phone"></span>
+        </li>
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8l8 5 8-5M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>
+          <span id="contact-email-main"></span>
+        </li>
+        <li class="flex items-center gap-2 text-sm text-blue-300/80">
+          <span>微信：</span><span id="contact-wechat"></span>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
+      © 2026 宁火明（NingHuoMing）. 保留所有权利。
+    </div>
+  </div>
+</footer>
+<!-- inject:footer:end -->
+  <script src="js/contact-info.js?v=20260802-perf1" defer></script>
+  <script src="js/script.js?v=20260802-perf1" defer></script>
+  <script type="module" src="js/quant.bundle.js?v=20260802-perf1"></script>
 </body>
 
 </html>

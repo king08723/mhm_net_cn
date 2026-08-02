@@ -1,67 +1,66 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-  <head>
+<html lang="zh-CN" data-nav="none">
+    <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>403 禁止访问 | 宁火明（NingHuoMing）</title>
     <meta name="description" content="403 Forbidden - 禁止访问" />
     <meta name="robots" content="noindex,follow" />
-    
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-    <!-- 自定义动效样式 -->
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="canonical" href="https://nhm.net.cn/403.html" />
+    <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/site.css?v=20260802-perf1" />
   </head>
   <body class="min-h-screen flex flex-col bg-gradient-to-br from-[#0b1e33] via-[#102a43] to-[#081624] text-white">
     <!-- 统一导航栏 -->
-    <header class="sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
-      <nav class="container mx-auto px-4 py-3">
-        <div class="flex items-center justify-between">
-          <a href="./index.html" class="flex items-center gap-3">
-            <img src="https://placehold.co/48x48?text=N" alt="Logo" class="rounded-md" />
-            <div class="leading-tight">
-              <span class="font-semibold text-lg">宁火明</span>
-              <span class="block text-sm text-blue-300">NingHuoMing</span>
-            </div>
-          </a>
-          
-          <!-- Desktop Menu -->
-          <div class="hidden md:flex items-center gap-6">
-            <a href="./index.html" class="hover:text-blue-300">首页</a>
-            <a href="./services.html" class="hover:text-blue-300">服务与方案</a>
-            <a href="./portfolio.html" class="hover:text-blue-300">案例展示</a>
-            <a href="./quant.html" class="hover:text-blue-300">量化系统</a>
-            <a href="./contact.html" class="hover:text-blue-300">联系与关于</a>
-          </div>
-
-          <!-- Mobile Menu Button -->
-          <button id="mobile-menu-btn" class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50">
-            <i class="fa-solid fa-bars"></i>
-          </button>
+    <!-- inject:header:start -->
+<!-- 全站统一页眉；由 scripts/inject_partials.js 注入，{{NAV_*}} 为当前页高亮占位 -->
+<header class="site-header sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
+  <nav class="container mx-auto px-4 py-3">
+    <div class="flex items-center justify-between">
+      <a href="./index.html" class="flex items-center gap-3">
+        <img src="./assets/logo.svg" alt="宁火明" width="48" height="48" class="rounded-md" />
+        <div class="leading-tight">
+          <span class="font-semibold text-lg">宁火明</span>
+          <span class="block text-sm text-blue-300">NingHuoMing</span>
         </div>
+      </a>
 
-        <!-- Mobile Menu Dropdown -->
-        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
-          <div class="flex flex-col gap-4 mt-4">
-            <a href="./index.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">首页</a>
-            <a href="./services.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">服务与方案</a>
-            <a href="./portfolio.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">案例展示</a>
-            <a href="./quant.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">量化系统</a>
-            <a href="./contact.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">联系与关于</a>
-            <a href="./contact.html#contact-form" class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg">
-              <i class="fa-solid fa-calendar-check mr-2"></i> 预约咨询
-            </a>
-          </div>
-        </div>
-      </nav>
-    </header>
+      <div class="hidden md:flex items-center gap-6">
+        <a href="./index.html" class="hover:text-blue-300 transition-colors">首页</a>
+        <a href="./services.html" class="hover:text-blue-300 transition-colors">服务与方案</a>
+        <a href="./portfolio.html" class="hover:text-blue-300 transition-colors">案例展示</a>
+        <a href="./quant.html" class="hover:text-blue-300 transition-colors">量化系统</a>
+        <a href="./contact.html" class="hover:text-blue-300 transition-colors">联系与关于</a>
+      </div>
+
+      <button id="mobile-menu-btn" type="button"
+        class="mobile-menu-btn md:hidden text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
+        aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
+        <svg class="qi menu-icon-open" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <svg class="qi menu-icon-close hidden" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+        <span class="menu-btn-fallback sr-only">菜单</span>
+      </button>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
+      <div class="flex flex-col gap-4 mt-4">
+        <a href="./index.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">首页</a>
+        <a href="./services.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">服务与方案</a>
+        <a href="./portfolio.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">案例展示</a>
+        <a href="./quant.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">量化系统</a>
+        <a href="./contact.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">联系与关于</a>
+        <a href="./contact.html#contact-form"
+          class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium">预约咨询</a>
+      </div>
+    </div>
+  </nav>
+  
+</header>
+<!-- inject:header:end -->
 
     <!-- 403 内容区域 -->
     <main class="flex-1 flex items-center justify-center min-h-[60vh] relative overflow-hidden">
@@ -80,7 +79,7 @@
                 <div class="absolute inset-0 flex flex-col items-center justify-center">
                     <div class="bg-white/5 backdrop-blur-sm border border-white/10 p-8 rounded-2xl shadow-2xl max-w-lg w-full transform hover:scale-105 transition-transform duration-300">
                         <div class="text-5xl text-blue-400 mb-4">
-                            <i class="fa-solid fa-user-lock"></i>
+                            <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 10.2-7.7M17 21v-3a2 2 0 1 1 4 0v3M16 21h6v-1a3 3 0 0 0-3-3h0a3 3 0 0 0-3 3v1z"/></svg>
                         </div>
                         <h2 class="text-2xl md:text-3xl font-bold text-white mb-2">禁止访问</h2>
                         <h3 class="text-lg text-blue-300 mb-4">Access Forbidden</h3>
@@ -90,11 +89,11 @@
                         </p>
                         <div class="flex flex-col sm:flex-row justify-center gap-4">
                             <a href="./index.html" class="px-6 py-3 rounded-md bg-blue-600 hover:bg-blue-500 font-medium inline-flex items-center justify-center gap-2 shadow-lg transition-all hover:-translate-y-1">
-                                <i class="fa-solid fa-house"></i>
+                                <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5z"/></svg>
                                 <span>返回首页</span>
                             </a>
                             <a href="./contact.html" class="px-6 py-3 rounded-md border border-blue-400 text-blue-300 hover:bg-blue-900/30 font-medium inline-flex items-center justify-center gap-2 transition-all hover:-translate-y-1">
-                                <i class="fa-solid fa-headset"></i>
+                                <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M4 12a8 8 0 0 1 16 0M4 12v4a2 2 0 0 0 2 2h1v-6H6a2 2 0 0 0-2 2zm16 0v4a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2zM12 20h2a2 2 0 0 0 2-2"/></svg>
                                 <span>联系支持</span>
                             </a>
                         </div>
@@ -105,45 +104,50 @@
     </main>
 
     <!-- 统一页脚 -->
-    <footer class="mt-auto border-t border-white/10 bg-[#081624]">
-      <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
-        <div>
-          <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
-          <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
-        </div>
-        <div>
-          <h4 class="font-semibold">快速导航</h4>
-          <ul class="mt-2 space-y-2 text-blue-200">
-            <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
-            <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
-            <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
-            <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
-            <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="font-semibold">联系我</h4>
-          <ul class="mt-2 space-y-2 text-blue-200">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-phone"></i> <span id="contact-phone"></span></li>
-            <li class="flex items-center gap-2"><i class="fa-brands fa-weixin"></i> <span id="contact-wechat"></span></li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-envelope"></i> <span id="contact-email-main"></span></li>
-          </ul>
-          <div class="mt-3 flex items-center gap-3 text-blue-300">
-            <a href="#" class="hover:text-white"><i class="fa-brands fa-github text-xl"></i></a>
-            <a href="#" class="hover:text-white"><i class="fa-brands fa-linkedin text-xl"></i></a>
-          </div>
-        </div>
-      </div>
-      <div class="border-t border-white/10">
-        <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
-          © 2026 宁火明（NingHuoMing）. 保留所有权利。
-        </div>
-      </div>
-    </footer>
+    <!-- inject:footer:start -->
+<!-- 全站统一页脚；社交无真实链接时不输出死链 -->
+<footer class="mt-auto border-t border-white/10 bg-[#081624]">
+  <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+    <div>
+      <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
+      <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
+    </div>
+    <div>
+      <h4 class="font-semibold">快速导航</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
+        <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
+        <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
+        <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
+        <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold">联系我</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7A2 2 0 0 1 22 16.9z"/></svg>
+          <span id="contact-phone"></span>
+        </li>
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8l8 5 8-5M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>
+          <span id="contact-email-main"></span>
+        </li>
+        <li class="flex items-center gap-2 text-sm text-blue-300/80">
+          <span>微信：</span><span id="contact-wechat"></span>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
+      © 2026 宁火明（NingHuoMing）. 保留所有权利。
+    </div>
+  </div>
+</footer>
+<!-- inject:footer:end -->
 
     <!-- 动效脚本 -->
-    <script src="js/script.js"></script>
-    
     <!-- 联系方式混淆脚本 (保持一致性) -->
     <script>
       (function() {
@@ -164,5 +168,7 @@
         });
       })();
     </script>
+      <script src="js/contact-info.js?v=20260802-perf1" defer></script>
+    <script src="js/script.js?v=20260802-perf1" defer></script>
   </body>
 </html>

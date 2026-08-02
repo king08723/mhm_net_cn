@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-label="NingHuoMing">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b1e33"/>
+      <stop offset="55%" stop-color="#102a43"/>
+      <stop offset="100%" stop-color="#081624"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1000" cy="100" r="200" fill="#38bdf8" opacity="0.08"/>
+  <circle cx="140" cy="540" r="240" fill="#3b82f6" opacity="0.1"/>
+  <!-- 品牌角标，与 logo.svg 一致 -->
+  <rect x="96" y="72" width="64" height="64" rx="12" fill="#0b1e33" stroke="#38bdf8" stroke-width="2" opacity="0.95"/>
+  <text x="128" y="114" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="#e0f2fe">N</text>
+  <text x="96" y="260" font-family="Georgia, 'PingFang SC', 'Microsoft YaHei', serif" font-size="78" font-weight="700" fill="#f8fafc">宁火明</text>
+  <text x="96" y="340" font-family="ui-sans-serif, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif" font-size="40" font-weight="600" fill="#7dd3fc">技术合伙人 · 全栈顾问</text>
+  <text x="96" y="410" font-family="ui-sans-serif, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif" font-size="26" fill="#93c5fd" opacity="0.85">量化系统 · 企业数字化 · MVP 落地</text>
+  <text x="96" y="560" font-family="ui-sans-serif, system-ui, sans-serif" font-size="22" fill="#64748b">nhm.net.cn</text>
+</svg>

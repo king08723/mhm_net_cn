@@ -14,11 +14,27 @@ hbuilder/
 # —— 运维脚本（Actions 回传等，非前端资源）——
 scripts/
 
+# —— 共享片段源（已注入到 HTML）——
+partials/
+
 # —— 依赖与包管理 ——
 node_modules/
 package.json
 package-lock.json
 npm-debug.log*
+tailwind.config.js
+css/site-src.css
+css/quant-src.css
+css/quant.css
+css/style.css
+
+# —— 量化源模块（部署使用 bundle）——
+js/quant.js
+js/quant-api.js
+js/quant-config.js
+js/quant-icons.js
+js/quant-progress.js
+js/quant-report.js
 
 # —— 版本控制与 IDE ——
 .git/

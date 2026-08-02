@@ -11,6 +11,8 @@ const ONLINE_URL = 'https://nhm.net.cn/';
 const DEPLOYIGNORE_FILE = path.join(PROJECT_DIR, '.deployignore');
 
 let isDeploying = false;
+/** build/inject 会改写工作区文件，短暂抑制 watch 避免部署死循环 */
+let suppressWatchUntil = 0;
 let deployTimer = null;
 const DEBOUNCE_DELAY = 1500; // 1.5秒防抖
 
@@ -120,8 +122,24 @@ function triggerDeploy(changedFile) {
   }, DEBOUNCE_DELAY);
 }
 
+function runBuildSync() {
+  // 部署前注入 partials、构建 CSS 与量化 bundle
+  const { spawnSync } = require('child_process');
+  const r = spawnSync('npm', ['run', 'build'], {
+    cwd: PROJECT_DIR,
+    encoding: 'utf8',
+    shell: true,
+  });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  if (r.status !== 0) {
+    throw new Error(`npm run build 失败，退出码 ${r.status}`);
+  }
+}
+
 function runDeploy(changedFile) {
   isDeploying = true;
+  suppressWatchUntil = Date.now() + 15_000;
   const timestamp = new Date().toLocaleTimeString();
   const patterns = loadDeployIgnorePatterns();
 
@@ -131,9 +149,13 @@ function runDeploy(changedFile) {
 
   let stagingDir;
   try {
+    console.log('先执行 npm run build（inject + css + quant bundle）...');
+    runBuildSync();
+    suppressWatchUntil = Date.now() + 8_000;
     stagingDir = buildStagingDir(patterns);
   } catch (err) {
     isDeploying = false;
+    suppressWatchUntil = Date.now() + 2_000;
     console.error(`[错误] 构建部署临时目录失败:`, err);
     console.log(`==================================================\n`);
     return;
@@ -188,6 +210,7 @@ if (process.argv.includes('--once')) {
   try {
     fs.watch(PROJECT_DIR, { recursive: true }, (eventType, filename) => {
       if (!filename) return;
+      if (Date.now() < suppressWatchUntil) return;
 
       const rel = filename.replace(/\\/g, '/');
       // 排除项变更不触发部署（避免改脚本/文档时误上传）

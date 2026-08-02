@@ -1,7 +1,6 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-  <head>
-    <!-- 关键说明：SEO 与 Open Graph 元信息 -->
+<html lang="zh-CN" data-nav="services">
+    <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>服务与方案 — 宁火明（NingHuoMing）</title>
@@ -9,73 +8,72 @@
     <meta name="keywords" content="技术合伙,MVP,量化系统,Backtrader,企业数字化,Odoo,ERP,咨询" />
     <meta name="author" content="NingHuoMing" />
     <meta name="robots" content="index,follow" />
-    <link rel="canonical" href="./services.html" />
+    <link rel="canonical" href="https://nhm.net.cn/services.html" />
     <meta property="og:title" content="服务与方案 — 宁火明（NingHuoMing）" />
     <meta property="og:description" content="全栈开发、量化工程与企业数字化的实战方案。" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="./services.html" />
-    <meta property="og:image" content="https://placehold.co/1200x630?text=Services+Overview" />
+    <meta property="og:url" content="https://nhm.net.cn/services.html" />
+    <meta property="og:image" content="https://nhm.net.cn/assets/og-default.svg" />
     <meta property="og:site_name" content="NingHuoMing" />
-
-    <!-- Tailwind 与 FontAwesome -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
-    <!-- 自定义动效样式 -->
-    <link rel="stylesheet" href="css/style.css" />
+    <link rel="icon" href="./assets/logo.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/site.css?v=20260802-perf1" />
   </head>
   <body class="min-h-screen flex flex-col bg-gradient-to-br from-[#0b1e33] via-[#102a43] to-[#081624] text-white">
     <!-- 统一导航栏 -->
-    <header class="sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
-      <nav class="container mx-auto px-4 py-3">
-        <!-- 顶栏一行：Logo + 桌面菜单 / 汉堡按钮；下拉菜单放在行外，避免手机展开被横向 flex 挤没 -->
-        <div class="flex items-center justify-between">
-          <a href="./index.html" class="flex items-center gap-3">
-            <!-- 建议尺寸：48x48px (或 64x64px) | 内容：网站 Logo 图标或个人头像 -->
-            <img src="https://placehold.co/48x48?text=N" alt="Logo 占位图" class="rounded-md" />
-            <div class="leading-tight">
-              <span class="font-semibold text-lg">宁火明</span>
-              <span class="block text-sm text-blue-300">NingHuoMing</span>
-            </div>
-          </a>
-          <div class="hidden md:flex items-center gap-6">
-            <a href="./index.html" class="hover:text-blue-300 transition-colors">首页</a>
-            <a href="./services.html" class="hover:text-blue-300 transition-colors">服务与方案</a>
-            <a href="./portfolio.html" class="hover:text-blue-300 transition-colors">案例展示</a>
-            <a href="./quant.html" class="hover:text-blue-300 transition-colors">量化系统</a>
-            <a href="./contact.html" class="hover:text-blue-300 transition-colors">联系与关于</a>
-          </div>
-          <button id="mobile-menu-btn" type="button"
-            class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
-            aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
-            <i class="fa-solid fa-bars"></i>
-          </button>
+    <!-- inject:header:start -->
+<!-- 全站统一页眉；由 scripts/inject_partials.js 注入，{{NAV_*}} 为当前页高亮占位 -->
+<header class="site-header sticky top-0 z-50 bg-[#0b1e33]/95 backdrop-blur-sm border-b border-white/10">
+  <nav class="container mx-auto px-4 py-3">
+    <div class="flex items-center justify-between">
+      <a href="./index.html" class="flex items-center gap-3">
+        <img src="./assets/logo.svg" alt="宁火明" width="48" height="48" class="rounded-md" />
+        <div class="leading-tight">
+          <span class="font-semibold text-lg">宁火明</span>
+          <span class="block text-sm text-blue-300">NingHuoMing</span>
         </div>
-        <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
-          <div class="flex flex-col gap-4 mt-4">
-            <a href="./index.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">首页</a>
-            <a href="./services.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">服务与方案</a>
-            <a href="./portfolio.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">案例展示</a>
-            <a href="./quant.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">量化系统</a>
-            <a href="./contact.html" class="block py-2 text-blue-100 hover:text-white hover:bg-white/5 rounded-lg px-4">联系与关于</a>
-            <a href="./contact.html#contact-form" class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-lg">
-              <i class="fa-solid fa-calendar-check mr-2"></i> 预约咨询
-            </a>
-          </div>
-        </div>
-      </nav>
-      <!-- 关键说明：全站统一 Slogan 顶部条 -->
-      <div class="hidden md:block border-t border-white/10 bg-blue-900/40">
-        <div class="container mx-auto px-4 py-2 text-sm md:text-base text-blue-200 flex items-center gap-2">
-          <i class="fa-solid fa-bullhorn text-blue-300"></i>
-          <span>为创业者提供技术合伙级支持，为企业提供数字化转型策略与咨询</span>
-        </div>
+      </a>
+
+      <div class="hidden md:flex items-center gap-6">
+        <a href="./index.html" class="hover:text-blue-300 transition-colors">首页</a>
+        <a href="./services.html" class="text-blue-400 font-semibold border-b-2 border-blue-400 pb-1">服务与方案</a>
+        <a href="./portfolio.html" class="hover:text-blue-300 transition-colors">案例展示</a>
+        <a href="./quant.html" class="hover:text-blue-300 transition-colors">量化系统</a>
+        <a href="./contact.html" class="hover:text-blue-300 transition-colors">联系与关于</a>
       </div>
-    </header>
+
+      <button id="mobile-menu-btn" type="button"
+        class="mobile-menu-btn md:hidden text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
+        aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
+        <svg class="qi menu-icon-open" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <svg class="qi menu-icon-close hidden" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+        <span class="menu-btn-fallback sr-only">菜单</span>
+      </button>
+    </div>
+
+    <div id="mobile-menu" class="hidden md:hidden mt-4 pb-4 border-t border-white/10">
+      <div class="flex flex-col gap-4 mt-4">
+        <a href="./index.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">首页</a>
+        <a href="./services.html" class="block py-2 rounded-lg px-4 text-blue-400 font-semibold bg-white/5">服务与方案</a>
+        <a href="./portfolio.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">案例展示</a>
+        <a href="./quant.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">量化系统</a>
+        <a href="./contact.html" class="block py-2 rounded-lg px-4 text-blue-100 hover:text-white hover:bg-white/5">联系与关于</a>
+        <a href="./contact.html#contact-form"
+          class="block py-3 text-center rounded-md bg-blue-600 hover:bg-blue-500 text-white font-medium">预约咨询</a>
+      </div>
+    </div>
+  </nav>
+  <div class="hidden md:block border-t border-white/10 bg-blue-900/40">
+    <div class="container mx-auto px-4 py-2 text-xs md:text-sm text-blue-200 flex items-center justify-center md:justify-start gap-2">
+      <svg class="qi text-blue-300 flex-shrink-0" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M3 11l18-5v12L3 13v-2zM11.5 13.5v5"/></svg>
+      <span class="truncate">为创业者提供技术合伙级支持，为企业提供数字化转型策略与咨询</span>
+    </div>
+  </div>
+</header>
+<!-- inject:header:end -->
 
     <main class="flex-1">
       <!-- 页面标题 -->
@@ -91,56 +89,56 @@
       <section class="container mx-auto px-4 pb-8 grid md:grid-cols-3 gap-6">
         <div class="rounded-xl border border-white/10 bg-white/5 p-6 animate-on-scroll hover-card delay-100 group">
           <div class="flex items-center gap-3 text-blue-300">
-            <i class="fa-solid fa-people-group text-2xl icon-pulse"></i>
+            <svg class="qi text-2xl icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M7 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM17 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20v-1a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v1M13 20v-1a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v1"/></svg>
             <h3 class="text-xl font-semibold">技术合伙 / MVP 孵化</h3>
           </div>
           <p class="mt-4 text-blue-100">
             全栈开发、技术选型、架构设计；搭建从 0 到 1 的 MVP，快速验证价值，缩短时间与成本。
           </p>
           <ul class="mt-4 space-y-2 text-blue-200">
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 微信小程序 / Web 快速交付</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> ECharts / 甘特图 / 数据可视化</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> CI/CD 与上线策略</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 微信小程序 / Web 快速交付</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> ECharts / 甘特图 / 数据可视化</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> CI/CD 与上线策略</li>
           </ul>
           <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
           <!-- 建议尺寸：800x300px | 内容：产品孵化、原型设计、头脑风暴场景 -->
           <!-- <img src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&h=300" alt="团队协作推进 MVP 孵化" class="mt-4 rounded-lg border border-white/10" /> -->
-          <img src="images/services-1.webp" alt="团队协作推进 MVP 孵化" class="mt-4 rounded-lg border border-white/10" />
+          <img src="images/services-1.webp" alt="团队协作推进 MVP 孵化" class="mt-4 rounded-lg border border-white/10" width="800" height="300" loading="lazy" decoding="async" />
         </div>
         <div class="rounded-xl border border-white/10 bg-white/5 p-6 animate-on-scroll hover-card delay-200 group">
           <div class="flex items-center gap-3 text-blue-300">
-            <i class="fa-solid fa-brain text-2xl icon-pulse"></i>
+            <svg class="qi text-2xl icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M9.5 2a3.5 3.5 0 0 0-3.4 4.2A3.5 3.5 0 0 0 4 9.5c0 1.3.7 2.4 1.8 3v1.7c0 .7.5 1.3 1.2 1.3h1.2V18a2 2 0 0 0 2 2h1"/></svg>
             <h3 class="text-xl font-semibold">量化系统搭建</h3>
           </div>
           <p class="mt-4 text-blue-100">
             Mac 端环境配置、策略回测、自动化脚本、数据清洗；基于 Python / Backtrader 构建完整交易框架。
           </p>
           <ul class="mt-4 space-y-2 text-blue-200">
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 券商数据打通与数据治理</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 回测引擎与风险控制</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 自动化运行与日志监控</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 券商数据打通与数据治理</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 回测引擎与风险控制</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 自动化运行与日志监控</li>
           </ul>
           <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
           <!-- 建议尺寸：800x300px | 内容：量化交易系统、策略代码、金融数据流 -->
           <!-- <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&h=300" alt="金融数据与量化系统搭建" class="mt-4 rounded-lg border border-white/10" /> -->
-          <img src="images/services-2.webp" alt="金融数据与量化系统搭建" class="mt-4 rounded-lg border border-white/10" />
+          <img src="images/services-2.webp" alt="金融数据与量化系统搭建" class="mt-4 rounded-lg border border-white/10" width="800" height="300" loading="lazy" decoding="async" />
         </div>
         <div class="rounded-xl border border-white/10 bg-white/5 p-6 animate-on-scroll hover-card delay-300 group">
           <div class="flex items-center gap-3 text-blue-300">
-            <i class="fa-solid fa-network-wired text-2xl icon-pulse"></i>
+            <svg class="qi text-2xl icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 16h14M7 16v3M17 16v3M12 11v5M8 11h8M6 7h4v4H6V7zm8 0h4v4h-4V7z"/></svg>
             <h3 class="text-xl font-semibold">企业数字化咨询</h3>
           </div>
           <p class="mt-4 text-blue-100">
             流程优化、Odoo / ERP 实施建议、工业互联落地；以新材料行业经验，打造可用、可管、可扩张的数字化系统。
           </p>
           <ul class="mt-4 space-y-2 text-blue-200">
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 供应链与库存优化</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 生产工艺与质量数据采集</li>
-            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 报表 / KPI 体系建设</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 供应链与库存优化</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 生产工艺与质量数据采集</li>
+            <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 报表 / KPI 体系建设</li>
           </ul>
           <!-- 关键说明：使用 Picsum 随机图，稳定显示 -->
           <!-- 建议尺寸：800x300px | 内容：企业咨询会议、ERP系统流程图、工厂管理场景 -->
-          <img src="images/services-3.webp" alt="企业流程优化与数字化规划" class="mt-4 rounded-lg border border-white/10" />
+          <img src="images/services-3.webp" alt="企业流程优化与数字化规划" class="mt-4 rounded-lg border border-white/10" width="800" height="300" loading="lazy" decoding="async" />
         </div>
       </section>
 
@@ -159,11 +157,11 @@
               <span class="ml-2 text-sm font-semibold text-red-500">限时免费咨询</span>
             </div>
             <ul class="mt-4 space-y-2 text-blue-200">
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 一对一深度沟通</li>
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 提供可执行建议</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 一对一深度沟通</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 提供可执行建议</li>
             </ul>
             <a href="./contact.html#contact-form" class="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 btn-primary shadow-lg hover:shadow-blue-500/30">
-              <i class="fa-solid fa-calendar-plus"></i> 预约咨询
+              <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M8 2v3M16 2v3M4 8h16M6 4h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM12 12v6M9 15h6"/></svg> 预约咨询
             </a>
           </div>
           <div class="rounded-2xl border border-white/10 bg-white/5 p-6 animate-on-scroll hover-card delay-200 group">
@@ -174,11 +172,11 @@
               <span class="ml-2 text-sm font-semibold text-red-500">限时免费咨询</span>
             </div>
             <ul class="mt-4 space-y-2 text-blue-200">
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 明确交付范围与里程碑</li>
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 按阶段验收与付款</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 明确交付范围与里程碑</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 按阶段验收与付款</li>
             </ul>
             <a href="./contact.html#contact-form" class="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 btn-primary shadow-lg hover:shadow-blue-500/30">
-              <i class="fa-solid fa-file-signature"></i> 获取方案
+              <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M7 3h7l3 3v5M7 3v14a2 2 0 0 0 2 2h4M14 17c1.5 0 3 1 3 2.5S15.5 22 14 22s-3-1-3-2.5 1.5-2.5 3-2.5z"/></svg> 获取方案
             </a>
           </div>
           <div class="rounded-2xl border border-white/10 bg-white/5 p-6 animate-on-scroll hover-card delay-300 group">
@@ -189,11 +187,11 @@
               <span class="ml-2 text-sm font-semibold text-red-500">免费咨询</span>
             </div>
             <ul class="mt-4 space-y-2 text-blue-200">
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 每周固定时段支持</li>
-              <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> 战略与架构双向输出</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 每周固定时段支持</li>
+              <li class="flex gap-2"><svg class="qi text-green-400 mt-1" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg> 战略与架构双向输出</li>
             </ul>
             <a href="./contact.html#contact-form" class="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-500 btn-primary">
-              <i class="fa-solid fa-user-tie"></i> 建立顾问关系
+              <svg class="qi" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0M10 21l2-4 2 4"/></svg> 建立顾问关系
             </a>
           </div>
         </div>
@@ -205,15 +203,15 @@
         <h2 class="text-2xl md:text-3xl font-bold">为什么选择我</h2>
         <div class="mt-6 grid md:grid-cols-3 gap-6">
           <div class="rounded-xl bg-white/5 border border-white/10 p-6 animate-on-scroll delay-100 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-layer-group icon-pulse"></i><span class="font-semibold">业务与技术双通</span></div>
+            <div class="flex items-center gap-2 text-blue-300"><svg class="qi icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M12 2l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></svg><span class="font-semibold">业务与技术双通</span></div>
             <p class="mt-2 text-blue-100">既懂 ROI 与增长，也懂架构与交付，少走弯路。</p>
           </div>
           <div class="rounded-xl bg-white/5 border border-white/10 p-6 animate-on-scroll delay-200 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-gauge-high icon-pulse"></i><span class="font-semibold">快速验证与上线</span></div>
+            <div class="flex items-center gap-2 text-blue-300"><svg class="qi icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 12l5-5"/></svg><span class="font-semibold">快速验证与上线</span></div>
             <p class="mt-2 text-blue-100">以 MVP 思维快速闭环，迭代优化，敏捷可控。</p>
           </div>
           <div class="rounded-xl bg-white/5 border border-white/10 p-6 animate-on-scroll delay-300 hover-card group">
-            <div class="flex items-center gap-2 text-blue-300"><i class="fa-solid fa-shield-halved icon-pulse"></i><span class="font-semibold">稳健与合规</span></div>
+            <div class="flex items-center gap-2 text-blue-300"><svg class="qi icon-pulse" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3zM12 3v16"/></svg><span class="font-semibold">稳健与合规</span></div>
             <p class="mt-2 text-blue-100">代码质量、数据安全与流程合规并重，长期可维护。</p>
           </div>
         </div>
@@ -244,85 +242,50 @@
     </main>
 
     <!-- 统一页脚 -->
-    <footer class="mt-auto border-t border-white/10 bg-[#081624]">
-      <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
-        <div>
-          <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
-          <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
-        </div>
-        <div>
-          <h4 class="font-semibold">快速导航</h4>
-          <ul class="mt-2 space-y-2 text-blue-200">
-            <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
-            <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
-            <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
-            <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
-            <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="font-semibold">联系我</h4>
-          <ul class="mt-2 space-y-2 text-blue-200">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-phone"></i> <span id="contact-phone"></span></li>
-            <li class="flex items-center gap-2"><i class="fa-brands fa-weixin"></i> <span id="contact-wechat"></span></li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-envelope"></i> <span id="contact-email-main"></span></li>
-          </ul>
-          <div class="mt-3 flex items-center gap-3 text-blue-300">
-            <a href="#" class="hover:text-white"><i class="fa-brands fa-github text-xl"></i></a>
-            <a href="#" class="hover:text-white"><i class="fa-brands fa-linkedin text-xl"></i></a>
-          </div>
-        </div>
-      </div>
-      <div class="border-t border-white/10">
-        <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
-          © 2026 宁火明（NingHuoMing）. 保留所有权利。
-        </div>
-      </div>
-    </footer>
+    <!-- inject:footer:start -->
+<!-- 全站统一页脚；社交无真实链接时不输出死链 -->
+<footer class="mt-auto border-t border-white/10 bg-[#081624]">
+  <div class="container mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+    <div>
+      <h4 class="font-semibold">宁火明 · NingHuoMing</h4>
+      <p class="mt-2 text-blue-200">技术合伙人 | 全栈顾问 | 量化与工业互联</p>
+    </div>
+    <div>
+      <h4 class="font-semibold">快速导航</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li><a class="hover:text-blue-300" href="./index.html">首页</a></li>
+        <li><a class="hover:text-blue-300" href="./services.html">服务与方案</a></li>
+        <li><a class="hover:text-blue-300" href="./portfolio.html">案例展示</a></li>
+        <li><a class="hover:text-blue-300" href="./quant.html">量化系统</a></li>
+        <li><a class="hover:text-blue-300" href="./contact.html">联系与关于</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4 class="font-semibold">联系我</h4>
+      <ul class="mt-2 space-y-2 text-blue-200">
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.5c.8.3 1.7.6 2.6.7A2 2 0 0 1 22 16.9z"/></svg>
+          <span id="contact-phone"></span>
+        </li>
+        <li class="flex items-center gap-2">
+          <svg class="qi" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4 8l8 5 8-5M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/></svg>
+          <span id="contact-email-main"></span>
+        </li>
+        <li class="flex items-center gap-2 text-sm text-blue-300/80">
+          <span>微信：</span><span id="contact-wechat"></span>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container mx-auto px-4 py-4 text-sm text-blue-300">
+      © 2026 宁火明（NingHuoMing）. 保留所有权利。
+    </div>
+  </div>
+</footer>
+<!-- inject:footer:end -->
     <!-- 动效脚本 -->
-    <script src="js/script.js"></script>
-    <script>
-      (function() {
-        // Simple obfuscation: Base64 or char codes
-        // Phone: 18028731664
-        const p = 'MTgwMjg3MzE2NjQ=';
-        // WeChat: caiqingcong18
-        const w = 'Y2FpcWluZ2NvbmcxOA==';
-        // Email 1: xio10086@icloud.com
-        const e1 = 'eGlvMTAwODZAaWNsb3VkLmNvbQ==';
-        // Email 2: kinp6590@gmail.com
-        const e2 = 'a2lucDY1OTBAZ21haWwuY29t';
-
-        function d(s) { return atob(s); }
-
-        function setContent(id, val) {
-          const els = document.querySelectorAll('#' + id);
-          els.forEach(el => el.textContent = val);
-        }
-        
-        function setLink(cls, val) {
-            const els = document.querySelectorAll('.' + cls);
-            els.forEach(el => {
-                el.href = 'mailto:' + val;
-                // If it was a form action, handle that too (forms usually don't use class for action, but we replaced mailto in href/action)
-                // Wait, form action replacement resulted in action=# class=email-link-main
-                // This is valid HTML but we need to set the attribute 'action' back to mailto:
-                if (el.tagName === 'FORM') {
-                    el.action = 'mailto:' + val;
-                }
-            });
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-           setContent('contact-phone', d(p));
-           setContent('contact-wechat', d(w));
-           setContent('contact-email-main', d(e1));
-           setContent('contact-email-gmail', d(e2));
-           
-           setLink('email-link-main', d(e1));
-           setLink('email-link-gmail', d(e2));
-        });
-      })();
-    </script>
-    </body>
+      <script src="js/contact-info.js?v=20260802-perf1" defer></script>
+    <script src="js/script.js?v=20260802-perf1" defer></script>
+  </body>
 </html>
