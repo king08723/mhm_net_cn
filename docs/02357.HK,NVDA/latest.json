@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msbm6o89_a8676bd1caaa",
+  "symbol": "02357.HK,NVDA",
+  "generatedAt": 1785664299127,
+  "runId": "30742383759",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "持有",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msbm6o89_a8676bd1caaa/report.md",
+    "marketReview": "jobs/job_msbm6o89_a8676bd1caaa/market_review.md",
+    "manifest": "jobs/job_msbm6o89_a8676bd1caaa/manifest.json",
+    "metrics": "jobs/job_msbm6o89_a8676bd1caaa/metrics.json"
+  }
+}
