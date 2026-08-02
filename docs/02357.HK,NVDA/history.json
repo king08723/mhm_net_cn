@@ -1,0 +1,17 @@
+{
+  "symbol": "02357.HK,NVDA",
+  "updatedAt": 1785664304209,
+  "jobs": [
+    {
+      "jobId": "job_msbm6o89_a8676bd1caaa",
+      "symbol": "02357.HK,NVDA",
+      "generatedAt": 1785664299127,
+      "runId": "30742383759",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "偏多",
+      "confidence": 0.55
+    }
+  ]
+}
