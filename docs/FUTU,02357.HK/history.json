@@ -1,0 +1,17 @@
+{
+  "symbol": "FUTU,02357.HK",
+  "updatedAt": 1785645398701,
+  "jobs": [
+    {
+      "jobId": "job_msbay6k5_f2e09b5be1bc",
+      "symbol": "FUTU,02357.HK",
+      "generatedAt": 1785645393320,
+      "runId": "30732497595",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "偏多",
+      "confidence": 0.55
+    }
+  ]
+}
