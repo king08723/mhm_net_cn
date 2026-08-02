@@ -1,0 +1,18 @@
+{
+  "rating": "持有",
+  "confidence": 0.55,
+  "trend": "偏多",
+  "supportLevels": [
+    19.5
+  ],
+  "resistanceLevels": [
+    21.5
+  ],
+  "riskLevel": "中",
+  "dataAsOf": 1785643212461,
+  "modelVersion": "report-heuristic-v2",
+  "realtimeEnabled": false,
+  "degradedFeatures": [],
+  "symbol": "01787,09618",
+  "source": "report-heuristic"
+}
