@@ -31,31 +31,55 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileMenuBtn.dataset.hasListener) return;
     mobileMenuBtn.dataset.hasListener = 'true';
 
+    // 检测 Font Awesome 是否真正生效；失败则启用文字兜底，避免按钮消失
+    const ensureMenuButtonVisible = () => {
+      const icon = mobileMenuBtn.querySelector('i');
+      if (!icon) {
+        mobileMenuBtn.classList.add('fa-missing');
+        return;
+      }
+      const width = icon.getBoundingClientRect().width;
+      const family = window.getComputedStyle(icon).fontFamily || '';
+      const faOk = width > 4 && /awesome|Font Awesome/i.test(family);
+      mobileMenuBtn.classList.toggle('fa-missing', !faOk);
+      // 无兜底节点时补一个，兼容旧页面
+      if (!faOk && !mobileMenuBtn.querySelector('.menu-btn-fallback')) {
+        const span = document.createElement('span');
+        span.className = 'menu-btn-fallback';
+        span.setAttribute('aria-hidden', 'true');
+        span.textContent = '菜单';
+        mobileMenuBtn.appendChild(span);
+      }
+    };
+
+    const syncMenuIcon = () => {
+      const closed = mobileMenu.classList.contains('hidden');
+      const icon = mobileMenuBtn.querySelector('i');
+      if (icon) {
+        icon.classList.toggle('fa-xmark', !closed);
+        icon.classList.toggle('fa-bars', closed);
+      }
+      const fallback = mobileMenuBtn.querySelector('.menu-btn-fallback');
+      if (fallback) fallback.textContent = closed ? '菜单' : '关闭';
+      mobileMenuBtn.setAttribute('aria-expanded', closed ? 'false' : 'true');
+      mobileMenuBtn.setAttribute('aria-label', closed ? '打开菜单' : '关闭菜单');
+    };
+
+    ensureMenuButtonVisible();
+    // 图标字体可能晚于首帧加载，再测一次
+    setTimeout(ensureMenuButtonVisible, 400);
+
     mobileMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       mobileMenu.classList.toggle('hidden');
-      
-      const icon = mobileMenuBtn.querySelector('i');
-      if (icon) {
-        if (mobileMenu.classList.contains('hidden')) {
-          icon.classList.remove('fa-xmark');
-          icon.classList.add('fa-bars');
-        } else {
-          icon.classList.remove('fa-bars');
-          icon.classList.add('fa-xmark');
-        }
-      }
+      syncMenuIcon();
     });
 
-    // Close mobile menu when a link is clicked
+    // 点击链接后收起手机菜单
     mobileMenu.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', () => {
         mobileMenu.classList.add('hidden');
-        const icon = mobileMenuBtn.querySelector('i');
-        if (icon) {
-          icon.classList.remove('fa-xmark');
-          icon.classList.add('fa-bars');
-        }
+        syncMenuIcon();
       });
     });
   }

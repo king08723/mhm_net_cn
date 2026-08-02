@@ -21,10 +21,10 @@
     <!-- 关键说明：Tailwind CSS CDN（JIT 模式支持任意值颜色） -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 关键说明：FontAwesome 图标库 -->
+    <!-- 勿加错误 integrity：SRI 失败会导致图标 CSS 被拒，手机汉堡菜单变成 0×0 看不见 -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-      integrity="sha512-1hcNqWf1vSgk7FJcQ3x0fDkzHkQHjvS4p7H9wGk1mQ8mH2k3EoGkXhGzIuG7A1Q6p4M8QpY2f4oJ2cQ9Gv9R0w=="
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
@@ -55,9 +55,12 @@
           <a href="./contact.html" class="hover:text-blue-300">联系与关于</a>
           </div>
 
-          <!-- Mobile Menu Button -->
-          <button id="mobile-menu-btn" class="md:hidden text-2xl text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50">
-            <i class="fa-solid fa-bars"></i>
+          <!-- Mobile Menu Button：图标库失败时仍显示文字，避免按钮消失 -->
+          <button id="mobile-menu-btn" type="button"
+            class="mobile-menu-btn md:hidden text-blue-200 hover:text-white focus:outline-none cursor-pointer relative z-50"
+            aria-label="打开菜单" aria-controls="mobile-menu" aria-expanded="false">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            <span class="menu-btn-fallback" aria-hidden="true">菜单</span>
           </button>
         </div>
 

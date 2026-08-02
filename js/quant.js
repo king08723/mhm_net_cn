@@ -1,5 +1,5 @@
 /**
- * AI 量化投研分析控制脚本 (quant.js) v7.4
+ * AI 量化投研分析控制脚本 (quant.js) v7.8
  *
  * 单链路（只认 jobId，内部实现细节不对用户展示）：
  *   浏览器 → trigger-stock-analysis → 返回 jobId
@@ -7,9 +7,9 @@
  *         → jobs/{jobId}/*.md + manifest.json + metrics.json
  *         → 前端 GET get-stock-result?jobId= → 消毒渲染
  *
- * v7.4：无真实 phase 时虚拟进度推进到「大模型综合研判」并缓行模拟；前序步骤加速。
- * v7.3：真实 phase 展示耗时提示 + 剩余预估；metrics 摘要优先（置信度百分比）。
- * v7.2：仅 github-manifest 驱动真实阶段；DB/pending 用受限虚拟进度；展示状态来源。
+ * v7.8：历史分析改为本机分析流水（localStorage），不依赖输入股票代码。
+ * v7.7：历史分析独立入口；按标的拉取 history.json；点击回看对应报告。
+ * v7.6：去掉摘要卡与左侧目录；按股票拆 Tab + 市场复盘 Tab；大气 Tab 样式。
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -19,23 +19,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // =====================================================================
   const UNICLOUD_TRIGGER_URL = 'https://f.nhm.net.cn/trigger-stock-analysis';
   const UNICLOUD_RESULT_URL  = 'https://f.nhm.net.cn/get-stock-result';
-  const HISTORY_RAW_BASE =
-    'https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/docs';
+  // 历史回看兜底：云函数不可达时直接读已发布的 jobs/{jobId}
+  const JOBS_RAW_BASE =
+    'https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/jobs';
 
   const COOLDOWN_MS            = 60 * 1000;
   const POLL_INTERVAL_INITIAL = 3000;
   const POLL_INTERVAL_MAX     = 15000;
   const POLL_FAST_WINDOW_MS   = 2 * 60 * 1000;
   const POLL_DEADLINE_MS      = 15 * 60 * 1000;
+  // 本机分析流水（每次触发/完成写入；报告就绪后展示）
   const RECENT_JOBS_KEY       = 'quant_recent_jobs_v1';
-  const RECENT_JOBS_MAX       = 8;
+  const RECENT_JOBS_MAX       = 20;
 
   const DEFAULT_ANALYSIS_OPTIONS = {
     mode: 'stocks-only',
     reportType: 'simple',
     reportLanguage: 'zh',
     notificationChannels: [],
-    notificationEmail: '',
+    notificationEmail: '', // 前端已不收集邮件；保留字段兼容云函数
     includeMarketContext: true,
     multiSymbols: true,
     enableRealtimeQuote: true,
@@ -66,31 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
   ];
   const TOTAL_DURATION = STEPS.reduce((s, st) => s + st.duration, 0);
 
-  const SOURCE_LABELS = {
-    db: '云端缓存',
-    'db-cache': '云端缓存',
-    'github-job': '云端报告库',
-    pending: '等待中',
-  };
-
-  // 进度来源：仅 github-manifest 可驱动真实阶段进度
-  const PHASE_SOURCE_LABELS = {
-    'github-manifest': '云端阶段',
-    db: '本地排队记录',
-    'db-cache': '云端缓存',
-    pending: '等待同步',
-    simulated: '模拟等待',
-  };
-
-  // 尚无真实 manifest 时：虚拟进度推进到「大模型综合研判」并缓行，不越过「生成研究报告」
+  // 尚无云端 phase 时：预估进度推进到「大模型综合研判」并缓行，不越过「生成研究报告」
   // 索引 4 = compute/analyze；上限落在该步中段，避免卡在「初始化分析环境」
   const VIRTUAL_HOLD_STEP_INDEX = 4;
   const VIRTUAL_PROGRESS_CAP = 68;
 
-  // 虚拟模式下前序步骤加速（秒），尽快进入研判等待态；研判步用更长缓行
+  // 预估模式下前序步骤加速（秒），尽快进入研判等待态；研判步用更长缓行
   const VIRTUAL_STEP_SECONDS = [3, 6, 10, 12, 150, 20];
 
-  // 停在「大模型综合研判」时轮播的模拟文案（真实 analyze 阶段也会用）
+  // 停在「大模型综合研判」时轮播的等待文案（真实 analyze 阶段也会用）
   const ANALYZE_SIM_MESSAGES = [
     '正在梳理技术指标与量价关系…',
     '正在结合行业与市场环境交叉验证…',
@@ -142,7 +128,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeSelect      = document.getElementById('mode-select');
   const reportTypeSelect = document.getElementById('report-type-select');
   const reportLanguageSelect = document.getElementById('report-language-select');
-  const notificationEmailInput = document.getElementById('notification-email-input');
   const forceRunCheckbox = document.getElementById('force-run-checkbox');
   const optMarketContext = document.getElementById('opt-market-context');
   const optRealtimeQuote = document.getElementById('opt-realtime-quote');
@@ -150,7 +135,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const optChipDist = document.getElementById('opt-chip-dist');
   const btnToggleAdvanced = document.getElementById('btn-toggle-advanced');
   const advancedOptions = document.getElementById('advanced-options');
-  const btnResumeLast = document.getElementById('btn-resume-last');
   const btnAnalyze      = document.getElementById('btn-analyze');
   const btnIcon         = document.getElementById('btn-icon');
   const btnLabel        = document.getElementById('btn-label');
@@ -171,26 +155,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputHint       = document.getElementById('input-hint');
   const reportContainer = document.getElementById('report-container');
   const reportTitle     = document.getElementById('report-title');
-  const reportContent   = document.getElementById('report-content');
-  const marketReviewContent = document.getElementById('market-review-content');
-  const sectionMarketReview = document.getElementById('section-market-review');
-  const sectionStockReport  = document.getElementById('section-stock-report');
-  const reportLayout    = document.getElementById('report-layout');
+  const reportTabs      = document.getElementById('report-tabs');
+  const reportPanels    = document.getElementById('report-panels');
   const reportMeta      = document.getElementById('report-meta');
-  const metaSource      = document.getElementById('meta-source');
   const metaGenerated   = document.getElementById('meta-generated');
   const metaRunId       = document.getElementById('meta-runid');
   const metaDegraded    = document.getElementById('meta-degraded');
-  const metricsSummary  = document.getElementById('metrics-summary');
   const historyPanel    = document.getElementById('history-panel');
   const historyList     = document.getElementById('history-list');
+  const historySymbolEl = document.getElementById('history-symbol');
+  const historyCountEl  = document.getElementById('history-count');
+  const historyEmptyEl  = document.getElementById('history-empty');
   const btnToggleHistory = document.getElementById('btn-toggle-history');
-  const reportToc       = document.getElementById('report-toc');
-  const reportTabs      = document.getElementById('report-tabs');
-  const tabMarketBtn    = document.getElementById('tab-market-btn');
-  const btnCopyReport   = document.getElementById('btn-copy-report');
-  const btnCopyStock    = document.getElementById('btn-copy-stock');
-  const btnCopyMarket   = document.getElementById('btn-copy-market');
 
   // =====================================================================
   // 内部状态
@@ -207,14 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastPhase        = '';
   let usePhaseProgress = false;
   let lastPhaseSource  = 'simulated';
-  let rawReportText    = '';
-  let rawStockText     = '';
-  let rawMarketText    = '';
   let lastActionsUrl   = '';
   let lastManifestUrl  = '';
   let lastRunId        = '';
   let lastUpdatedAt    = 0;
-  /** 研判阶段模拟文案轮播定时器 */
+  /** 研判阶段等待文案轮播定时器 */
   let analyzeSimTimer  = null;
   let analyzeSimIndex  = 0;
 
@@ -236,11 +209,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setPhaseSourceHint(phaseSource) {
+    // 仅内部状态；不对用户展示「来源 / 模拟 / 底层仓库」等字样
     lastPhaseSource = phaseSource || 'simulated';
-    if (!panelPhaseSource) return;
-    const label = PHASE_SOURCE_LABELS[lastPhaseSource] || PHASE_SOURCE_LABELS.simulated;
-    panelPhaseSource.textContent = `状态来源：${label}`;
-    panelPhaseSource.classList.remove('hidden');
+    if (panelPhaseSource) {
+      panelPhaseSource.textContent = '';
+      panelPhaseSource.classList.add('hidden');
+    }
+  }
+
+  /** debug 文案脱敏：不暴露 github / 虚拟 等实现细节 */
+  function scrubDebugToken(value) {
+    return String(value || '')
+      .replace(/github-manifest/gi, 'live')
+      .replace(/github-job/gi, 'cloud')
+      .replace(/db-cache/gi, 'cache')
+      .replace(/simulated/gi, 'waiting')
+      .replace(/https?:\/\/raw\.githubusercontent\.com\/\S+/gi, '(report)')
+      .replace(/https?:\/\/github\.com\/\S+/gi, '(run)')
+      .replace(/虚拟|模拟/g, '');
   }
 
   function updateDebugInfo(extra) {
@@ -253,11 +239,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const parts = [
       currentJobId ? `jobId=${currentJobId}` : '',
       lastRunId ? `runId=${lastRunId}` : '',
-      lastPhaseSource ? `phaseSource=${lastPhaseSource}` : '',
-      extra && extra.source ? `source=${extra.source}` : '',
+      lastPhaseSource ? `phase=${scrubDebugToken(lastPhaseSource)}` : '',
+      extra && extra.source ? `source=${scrubDebugToken(extra.source)}` : '',
       lastUpdatedAt ? `updatedAt=${formatTime(lastUpdatedAt) || lastUpdatedAt}` : '',
-      lastManifestUrl ? `manifest=${lastManifestUrl}` : '',
-      lastActionsUrl ? `actions=${lastActionsUrl}` : '',
+      lastManifestUrl ? `manifest=${scrubDebugToken(lastManifestUrl)}` : '',
+      lastActionsUrl ? `actions=${scrubDebugToken(lastActionsUrl)}` : '',
     ].filter(Boolean);
     panelDebugInfo.textContent = parts.join(' · ');
     panelDebugInfo.classList.remove('hidden');
@@ -268,15 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (symbolInput) {
     symbolInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleAnalyze(); });
-  }
-  if (btnCopyReport) {
-    btnCopyReport.addEventListener('click', () => copyText(rawReportText, btnCopyReport, '复制报告'));
-  }
-  if (btnCopyStock) {
-    btnCopyStock.addEventListener('click', () => copyText(rawStockText, btnCopyStock, '复制个股分析'));
-  }
-  if (btnCopyMarket) {
-    btnCopyMarket.addEventListener('click', () => copyText(rawMarketText, btnCopyMarket, '复制市场复盘'));
   }
   if (reportTabs) {
     reportTabs.addEventListener('click', (e) => {
@@ -295,42 +272,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnToggleHistory && historyList) {
     btnToggleHistory.addEventListener('click', () => {
       const open = !historyList.classList.contains('hidden');
-      historyList.classList.toggle('hidden', open);
-      btnToggleHistory.textContent = open ? '展开' : '收起';
-    });
-  }
-  if (btnResumeLast) {
-    btnResumeLast.addEventListener('click', () => {
-      const recent = loadRecentJobs();
-      if (!recent.length) return;
-      resumeJob(recent[0].jobId, recent[0].symbol || '');
-    });
-  }
-
-  function copyText(text, btn, label) {
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(() => {
-      if (!btn) return;
-      const orig = btn.innerHTML;
-      btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i><span class="text-green-400">已复制</span>`;
-      setTimeout(() => {
-        btn.innerHTML = orig.includes(label)
-          ? orig
-          : `<i class="fa-regular fa-copy"></i><span>${label}</span>`;
-      }, 2000);
-    }).catch(() => {
-      showInputHint('复制失败，请手动选择文本复制');
+      setHistoryExpanded(!open);
     });
   }
 
   function isValidSymbol(sym) {
     if (!sym) return false;
     return /^[A-Z0-9][A-Z0-9.\-]{0,19}$/.test(sym);
-  }
-
-  function isValidEmail(email) {
-    if (!email) return true;
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
   function normalizeSymbols(raw) {
@@ -354,16 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function collectAnalysisOptions() {
-    const notificationEmail = notificationEmailInput
-      ? notificationEmailInput.value.trim()
-      : DEFAULT_ANALYSIS_OPTIONS.notificationEmail;
     return {
       ...DEFAULT_ANALYSIS_OPTIONS,
       mode: readSelectValue(modeSelect, ['full', 'market-only', 'stocks-only'], DEFAULT_ANALYSIS_OPTIONS.mode),
       reportType: readSelectValue(reportTypeSelect, ['brief', 'simple', 'full'], DEFAULT_ANALYSIS_OPTIONS.reportType),
       reportLanguage: readSelectValue(reportLanguageSelect, ['zh', 'en', 'ko'], DEFAULT_ANALYSIS_OPTIONS.reportLanguage),
-      notificationChannels: notificationEmail ? ['email'] : [],
-      notificationEmail,
+      // 页面已去掉邮件输入，始终不附加邮件通知
+      notificationChannels: [],
+      notificationEmail: '',
       includeMarketContext: readCheckbox(optMarketContext, DEFAULT_ANALYSIS_OPTIONS.includeMarketContext),
       enableRealtimeQuote: readCheckbox(optRealtimeQuote, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeQuote),
       enableRealtimeTechnicalIndicators: readCheckbox(optRealtimeTech, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeTechnicalIndicators),
@@ -423,34 +369,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveRecentJob(entry) {
     if (!entry || !entry.jobId) return;
+    const prev = loadRecentJobs().find((item) => item.jobId === entry.jobId) || {};
     const list = loadRecentJobs().filter((item) => item.jobId !== entry.jobId);
+    // 合并更新，保留此前已写入的摘要字段
     list.unshift({
       jobId: entry.jobId,
-      symbol: entry.symbol || '',
-      status: entry.status || 'queued',
-      requestedAt: entry.requestedAt || Date.now(),
+      symbol: entry.symbol || prev.symbol || '',
+      status: entry.status || prev.status || 'queued',
+      requestedAt: entry.requestedAt || prev.requestedAt || Date.now(),
+      generatedAt: entry.generatedAt || prev.generatedAt || 0,
+      rating: entry.rating != null ? entry.rating : (prev.rating || ''),
+      riskLevel: entry.riskLevel != null ? entry.riskLevel : (prev.riskLevel || ''),
+      trend: entry.trend != null ? entry.trend : (prev.trend || ''),
+      confidence: entry.confidence != null ? entry.confidence : prev.confidence,
     });
     try {
       localStorage.setItem(RECENT_JOBS_KEY, JSON.stringify(list.slice(0, RECENT_JOBS_MAX)));
     } catch (_) { /* 隐私模式等忽略 */ }
-    updateResumeButton();
-  }
-
-  function updateResumeButton() {
-    if (!btnResumeLast) return;
-    const recent = loadRecentJobs();
-    if (!recent.length) {
-      btnResumeLast.style.display = 'none';
-      return;
-    }
-    // 若 URL 已有当前任务，不必再提示「继续查看」
-    const urlJob = new URLSearchParams(window.location.search).get('jobId');
-    if (urlJob && recent[0].jobId === urlJob) {
-      btnResumeLast.style.display = 'none';
-      return;
-    }
-    btnResumeLast.style.display = '';
-    btnResumeLast.textContent = `继续查看上次分析（${recent[0].symbol || '最近一次'}）`;
   }
 
   /** 把 jobId 写入地址栏，刷新后可继续轮询 / 查看结果 */
@@ -464,7 +399,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function bootstrapFromUrlOrStorage() {
-    updateResumeButton();
     const params = new URLSearchParams(window.location.search);
     const jobId = (params.get('jobId') || '').trim();
     if (jobId) {
@@ -836,7 +770,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const symbols = normalizeSymbols(raw);
     if (!symbols.length) { showInputHint('请输入股票代码（例如 00700.HK 或 AAPL）'); return; }
     if (!options.multiSymbols && symbols.length > 1) { showInputHint('当前不支持多股票，请只输入一个代码'); return; }
-    if (!isValidEmail(options.notificationEmail)) { showInputHint('邮件地址格式不正确，请检查后重试'); return; }
     const invalidSymbol = symbols.find(sym => !isValidSymbol(sym));
     if (invalidSymbol) { showInputHint(`格式不合法：「${invalidSymbol}」，请使用如 00700.HK、AAPL`); return; }
 
@@ -887,16 +820,13 @@ document.addEventListener('DOMContentLoaded', () => {
     lastManifestUrl = '';
     lastRunId = '';
     lastUpdatedAt = 0;
-    rawReportText = '';
-    rawStockText = '';
-    rawMarketText = '';
-
     if (reportContainer) reportContainer.classList.add('hidden');
     if (emptyState) emptyState.style.display = 'flex';
-    if (metricsSummary) {
-      metricsSummary.classList.add('hidden');
-      metricsSummary.innerHTML = '';
+    if (reportTabs) {
+      reportTabs.innerHTML = '';
+      reportTabs.classList.add('hidden');
     }
+    if (reportPanels) reportPanels.innerHTML = '';
 
     buildSteps();
     showPanel();
@@ -1089,12 +1019,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     lastActionsUrl = data.actionsUrl || lastActionsUrl;
     lastManifestUrl = data.manifestUrl || (data.resultFiles && data.resultFiles.manifestUrl) || lastManifestUrl;
-    saveRecentJob({
-      jobId: data.jobId || currentJobId,
-      symbol: data.symbol || (panelSymbol && panelSymbol.textContent) || '',
-      status: 'succeeded',
-      requestedAt: data.requestedAt || Date.now(),
-    });
+    {
+      const m = (data && data.metrics && typeof data.metrics === 'object') ? data.metrics : {};
+      saveRecentJob({
+        jobId: data.jobId || currentJobId,
+        symbol: data.symbol || (panelSymbol && panelSymbol.textContent) || '',
+        status: 'succeeded',
+        requestedAt: data.requestedAt || Date.now(),
+        generatedAt: data.generatedAt || Date.now(),
+        rating: m.rating || '',
+        riskLevel: m.riskLevel || '',
+        trend: m.trend || '',
+        confidence: m.confidence,
+      });
+    }
 
     const startVal = currentProgress;
     const startT   = performance.now();
@@ -1116,12 +1054,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderReport(data);
 
         if (panelMessage) {
-          const src = SOURCE_LABELS[data.source] || data.source || '';
           const partial = data.errorCode === 'PARTIAL_RESULT'
             ? ' <span style="color:#fbbf24">（部分结果）</span>'
             : '';
           panelMessage.innerHTML = `<span style="color:#4ade80;font-weight:500">AI 投研报告已就绪！</span>${partial}`
-            + ` <span style="color:#93c5fd;opacity:0.9">来源：${src || '云端'}，已在下方展示。</span>`;
+            + ` <span style="color:#93c5fd;opacity:0.9">已在下方展示。</span>`;
         }
       }
     }
@@ -1171,18 +1108,123 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * 按 jobId 轮询任务状态（唯一读取路径）
+   * 历史回看兜底：云函数不可达时，直接读已发布的 jobs/{jobId} 终态产物。
+   * 仅处理 succeeded / failed；进行中任务仍走云函数轮询。
+   */
+  async function fetchJobFromGithubRaw(jobId) {
+    if (!jobId) return null;
+    const base = `${JOBS_RAW_BASE}/${encodeURIComponent(jobId)}`;
+    const stamp = Date.now();
+    try {
+      const manifestRes = await fetch(`${base}/manifest.json?t=${stamp}`, { cache: 'no-store' });
+      if (!manifestRes.ok) return null;
+      const manifest = await manifestRes.json();
+      if (!manifest || typeof manifest !== 'object') return null;
+
+      const status = manifest.status || manifest.phase || '';
+      lastManifestUrl = `${base}/manifest.json`;
+      if (manifest.runId) lastRunId = String(manifest.runId);
+      if (manifest.updatedAt) lastUpdatedAt = Number(manifest.updatedAt) || 0;
+
+      if (status === 'failed' || status === 'timeout') {
+        return {
+          success: true,
+          ready: false,
+          status,
+          jobId: manifest.jobId || jobId,
+          symbol: manifest.symbol || '',
+          error: manifest.error || '分析失败',
+          errorCode: manifest.errorCode || 'ANALYSIS_FAILED',
+          phase: manifest.phase || status,
+          phaseMessage: manifest.phaseMessage || '',
+          phaseSource: 'github-manifest',
+          source: 'github-job',
+          generatedAt: manifest.generatedAt || manifest.finishedAt || 0,
+          manifestUrl: lastManifestUrl,
+        };
+      }
+
+      if (status !== 'succeeded') return null;
+
+      const [reportRes, metricsRes, marketRes] = await Promise.all([
+        fetch(`${base}/report.md?t=${stamp}`, { cache: 'no-store' }),
+        manifest.hasMetrics === false
+          ? Promise.resolve(null)
+          : fetch(`${base}/metrics.json?t=${stamp}`, { cache: 'no-store' }),
+        (manifest.marketReviewLength > 0 || manifest.marketReviewSha)
+          ? fetch(`${base}/market_review.md?t=${stamp}`, { cache: 'no-store' })
+          : Promise.resolve(null),
+      ]);
+
+      const report = reportRes && reportRes.ok ? await reportRes.text() : '';
+      if (!report.trim()) return null;
+
+      let metrics = null;
+      if (metricsRes && metricsRes.ok) {
+        try { metrics = await metricsRes.json(); } catch (_) { metrics = null; }
+      }
+      const marketReview = marketRes && marketRes.ok ? await marketRes.text() : '';
+
+      return {
+        success: true,
+        ready: true,
+        status: 'succeeded',
+        jobId: manifest.jobId || jobId,
+        symbol: manifest.symbol || '',
+        report,
+        marketReview: marketReview || '',
+        metrics,
+        phase: 'succeeded',
+        phaseMessage: manifest.phaseMessage || '分析已完成',
+        phaseSource: 'github-manifest',
+        source: 'github-job',
+        generatedAt: manifest.generatedAt || manifest.finishedAt || 0,
+        runId: manifest.runId || '',
+        updatedAt: manifest.updatedAt || 0,
+        manifestUrl: lastManifestUrl,
+        resultFiles: {
+          manifestUrl: lastManifestUrl,
+          reportUrl: `${base}/report.md`,
+          metricsUrl: `${base}/metrics.json`,
+        },
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /**
+   * 按 jobId 轮询任务状态；云函数失败时对已发布终态走 GitHub raw 兜底。
    * @param {string} jobId
    */
   function pollJobResult(jobId) {
     const deadline = Date.now() + POLL_DEADLINE_MS;
     const pollStartedAt = Date.now();
+    let rawFallbackTried = false;
+
+    async function tryRawFallback() {
+      if (rawFallbackTried || isResultReady) return false;
+      rawFallbackTried = true;
+      const fallback = await fetchJobFromGithubRaw(jobId);
+      if (!fallback) return false;
+      if (fallback.status === 'succeeded' && fallback.ready) {
+        finishWorkflowSuccess(fallback);
+        return true;
+      }
+      if (fallback.status === 'failed' || fallback.status === 'timeout') {
+        finishWorkflowFailure(fallback);
+        return true;
+      }
+      return false;
+    }
 
     async function tick() {
       if (isResultReady) return;
       if (jobId !== currentJobId) return;
 
       if (Date.now() >= deadline) {
+        // 超时前再尝试一次公开结果库，便于历史回看
+        if (await tryRawFallback()) return;
         stopPolling();
         if (!isResultReady) {
           stopElapsedTimer();
@@ -1196,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (reCheckBtn) {
               reCheckBtn.onclick = () => {
                 isResultReady = false;
+                rawFallbackTried = false;
                 setBadge('running');
                 setPanelIcon('spin');
                 setBtnState('loading');
@@ -1266,6 +1309,14 @@ document.addEventListener('DOMContentLoaded', () => {
               return;
             }
 
+            // 云函数拿不到正文时，对已成功任务走公开结果库兜底
+            if (
+              (data.errorCode === 'EMPTY_REPORT' || data.errorCode === 'FETCH_FAILED')
+              && await tryRawFallback()
+            ) {
+              return;
+            }
+
             // FETCH_FAILED：manifest 已声明报告，正文读取中 — 保持 publish 阶段重试
             if (data.errorCode === 'FETCH_FAILED' && realPhase) {
               if (panelMessage) {
@@ -1274,10 +1325,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
           }
         } else if (res.status === 404) {
+          if (await tryRawFallback()) return;
           finishWorkflowFailure({ status: 'failed', error: '任务不存在或已被清理', errorCode: 'NOT_FOUND' });
           return;
+        } else if (await tryRawFallback()) {
+          return;
         }
-      } catch (_) { /* 网络抖动静默重试 */ }
+      } catch (_) {
+        // 网关抖动：优先尝试公开结果库（历史回看场景）
+        if (await tryRawFallback()) return;
+      }
 
       if (isResultReady) return;
       const wait = nextPollInterval(Date.now() - pollStartedAt);
@@ -1300,13 +1357,24 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/javascript:/gi, '');
   }
 
+  /**
+   * 上游报告常见「**标签**: 内容」连续单行；CommonMark 会并成一段导致不换行。
+   * 在标签行前补空行，强制分成独立段落（修复「📊 业绩预期」挤在上一行后的问题）。
+   */
+  function normalizeReportMarkdown(md) {
+    return String(md || '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\n(\*\*[^*\n]{1,48}\*\*\s*[:：])/g, '\n\n$1');
+  }
+
   function parseMd(text) {
     if (!text) return '';
+    const normalized = normalizeReportMarkdown(text);
     let html;
     if (typeof marked !== 'undefined' && typeof marked.parse === 'function') {
-      html = marked.parse(text);
+      html = marked.parse(normalized);
     } else {
-      html = text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      html = normalized.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
     return sanitizeHtml(html);
   }
@@ -1321,28 +1389,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function slugify(text) {
-    return String(text || '')
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^\w\u4e00-\u9fff-]/g, '')
-      .slice(0, 48) || 'section';
-  }
-
-  function switchReportTab(tab) {
-    if (!reportTabs) return;
-    reportTabs.querySelectorAll('button[data-tab]').forEach((btn) => {
-      btn.setAttribute('aria-selected', btn.getAttribute('data-tab') === tab ? 'true' : 'false');
-    });
-    if (sectionStockReport) {
-      sectionStockReport.style.display = tab === 'stock' ? 'block' : 'none';
-    }
-    if (sectionMarketReview && !sectionMarketReview.classList.contains('hidden')) {
-      sectionMarketReview.style.display = tab === 'market' ? 'block' : 'none';
-    }
-  }
-
   function escapeText(s) {
     return String(s || '')
       .replace(/&/g, '&amp;')
@@ -1351,109 +1397,251 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/"/g, '&quot;');
   }
 
-  function renderMetricsSummary(metrics) {
-    if (!metricsSummary) return;
-    if (!metrics || typeof metrics !== 'object') {
-      metricsSummary.classList.add('hidden');
-      metricsSummary.innerHTML = '';
-      return;
+  /**
+   * 把整份个股报告按「## … (股票代码)」拆成多页。
+   * 仪表盘 / 分析结果摘要等前置内容并入第一只股票页。
+   */
+  function splitStockReportSections(reportMd, fallbackSymbol) {
+    const text = String(reportMd || '').replace(/\r\n/g, '\n').trim();
+    if (!text) return [];
+
+    const headingRe = /^##\s+(.+?)\s*\(([A-Z0-9][A-Z0-9.\-]{0,19})\)\s*$/gm;
+    const matches = [];
+    let m;
+    while ((m = headingRe.exec(text)) !== null) {
+      const titleLine = m[1].trim();
+      // 跳过「分析结果摘要」这类非个股标题
+      if (/分析结果摘要/.test(titleLine)) continue;
+      const name = titleLine
+        .replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\s]+/u, '')
+        .replace(/^[🟠🟢🟡🔴⚪⚫]+/u, '')
+        .trim() || m[2];
+      matches.push({
+        index: m.index,
+        end: m.index + m[0].length,
+        code: String(m[2] || '').toUpperCase(),
+        name,
+        heading: m[0],
+      });
     }
 
-    // 置信度统一显示为百分比，便于扫读
-    let confidenceText = '';
-    if (metrics.confidence != null && metrics.confidence !== '') {
-      const n = Number(metrics.confidence);
-      if (!Number.isNaN(n)) {
-        confidenceText = n <= 1 ? `${Math.round(n * 100)}%` : `${Math.round(n)}%`;
-      } else {
-        confidenceText = String(metrics.confidence);
+    if (!matches.length) {
+      const code = String(fallbackSymbol || '').split(',')[0].trim().toUpperCase() || 'REPORT';
+      return [{
+        id: `stock-${code}`,
+        code,
+        name: code,
+        markdown: text,
+      }];
+    }
+
+    return matches.map((item, idx) => {
+      const bodyStart = item.index;
+      const bodyEnd = idx + 1 < matches.length ? matches[idx + 1].index : text.length;
+      let markdown = text.slice(bodyStart, bodyEnd).trim();
+      // 第一只股票带上仪表盘等前置内容，避免丢失总览信息
+      if (idx === 0 && item.index > 0) {
+        const preamble = text.slice(0, item.index).trim();
+        if (preamble) markdown = `${preamble}\n\n${markdown}`;
       }
-    }
-
-    const cards = [
-      { label: '综合观点', value: metrics.rating },
-      { label: '风险等级', value: metrics.riskLevel },
-      { label: '趋势判断', value: metrics.trend },
-      { label: '置信度（参考）', value: confidenceText },
-      {
-        label: '关键支撑',
-        value: Array.isArray(metrics.supportLevels) ? metrics.supportLevels.join(', ') : metrics.supportLevels,
-      },
-      {
-        label: '关键压力',
-        value: Array.isArray(metrics.resistanceLevels) ? metrics.resistanceLevels.join(', ') : metrics.resistanceLevels,
-      },
-      { label: '数据时间', value: metrics.dataAsOf ? formatTime(metrics.dataAsOf) || String(metrics.dataAsOf) : '' },
-      {
-        label: '实时增强',
-        value: metrics.realtimeEnabled === true ? '开' : (metrics.realtimeEnabled === false ? '关' : ''),
-      },
-    ].filter((c) => c.value !== '' && c.value != null);
-
-    if (!cards.length) {
-      metricsSummary.classList.add('hidden');
-      metricsSummary.innerHTML = '';
-      return;
-    }
-
-    metricsSummary.innerHTML = cards.map((c) => `
-      <div class="bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-        <div class="text-[10px] text-blue-300/60 mb-0.5">${escapeText(c.label)}</div>
-        <div class="text-sm text-white font-medium truncate">${escapeText(c.value)}</div>
-      </div>`).join('');
-    metricsSummary.classList.remove('hidden');
+      return {
+        id: `stock-${item.code}-${idx}`,
+        code: item.code,
+        name: item.name,
+        markdown,
+      };
+    });
   }
 
-  async function loadSymbolHistory(symbol) {
-    if (!historyPanel || !historyList || !symbol) {
-      if (historyPanel) historyPanel.classList.add('hidden');
-      return;
-    }
-    // 多代码时取第一个做历史索引
-    const primary = String(symbol).split(',')[0].trim().toUpperCase();
-    if (!primary) {
-      historyPanel.classList.add('hidden');
-      return;
-    }
+  function switchReportTab(tabId) {
+    if (!reportTabs || !reportPanels) return;
+    const buttons = Array.from(reportTabs.querySelectorAll('button[data-tab]'));
+    if (!buttons.length) return;
+    const ids = buttons.map((btn) => btn.getAttribute('data-tab'));
+    const next = ids.includes(tabId) ? tabId : ids[0];
 
-    try {
-      const url = `${HISTORY_RAW_BASE}/${encodeURIComponent(primary)}/history.json?t=${Date.now()}`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) {
-        historyPanel.classList.add('hidden');
-        return;
-      }
-      const data = await res.json();
-      const items = Array.isArray(data)
-        ? data
-        : (Array.isArray(data.jobs) ? data.jobs : (Array.isArray(data.history) ? data.history : []));
-      if (!items.length) {
-        historyPanel.classList.add('hidden');
-        return;
-      }
+    buttons.forEach((btn) => {
+      const active = btn.getAttribute('data-tab') === next;
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      btn.tabIndex = active ? 0 : -1;
+    });
 
-      historyList.innerHTML = '';
-      items.slice(0, 10).forEach((item) => {
-        const jobId = item.jobId || item.id || '';
-        if (!jobId) return;
-        const row = document.createElement('button');
-        row.type = 'button';
-        row.className = 'w-full text-left px-2 py-1.5 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 cursor-pointer';
-        const when = formatTime(item.generatedAt || item.requestedAt) || '';
-        const rating = item.rating || item.riskLevel || '';
-        const title = when || '历史分析';
-        row.innerHTML = `<span class="text-sky-300">${escapeText(primary)}</span>`
-          + (when ? ` · ${escapeText(when)}` : '')
-          + (rating ? ` · ${escapeText(rating)}` : '')
-          + (!when && !rating ? ` · ${escapeText(title)}` : '');
-        row.addEventListener('click', () => resumeJob(jobId, primary));
-        historyList.appendChild(row);
+    reportPanels.querySelectorAll('.report-pane').forEach((pane) => {
+      const active = pane.getAttribute('data-pane') === next;
+      if (active) pane.removeAttribute('hidden');
+      else pane.setAttribute('hidden', '');
+    });
+  }
+
+  function buildReportTabs(stockSections, marketMd) {
+    if (!reportTabs || !reportPanels) return;
+
+    reportTabs.innerHTML = '';
+    reportPanels.innerHTML = '';
+
+    const tabs = stockSections.map((s) => ({
+      id: s.id,
+      label: s.name || s.code,
+      code: s.code,
+      kind: 'stock',
+      markdown: s.markdown,
+    }));
+    if (marketMd) {
+      tabs.push({
+        id: 'market',
+        label: '市场复盘',
+        code: '',
+        kind: 'market',
+        markdown: marketMd,
       });
+    }
+
+    if (!tabs.length) {
+      reportTabs.classList.add('hidden');
+      return;
+    }
+
+    tabs.forEach((tab, idx) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('data-tab', tab.id);
+      btn.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
+      btn.tabIndex = idx === 0 ? 0 : -1;
+      if (tab.kind === 'market') {
+        btn.innerHTML = `<span>${escapeText(tab.label)}</span>`;
+      } else {
+        btn.innerHTML = `<span>${escapeText(tab.label)}</span>`
+          + (tab.code && tab.code !== tab.label
+            ? `<span class="tab-code">${escapeText(tab.code)}</span>`
+            : '');
+      }
+      reportTabs.appendChild(btn);
+
+      const pane = document.createElement('section');
+      pane.className = 'report-pane';
+      pane.setAttribute('data-pane', tab.id);
+      pane.setAttribute('role', 'tabpanel');
+      if (idx !== 0) pane.setAttribute('hidden', '');
+      pane.innerHTML = `<div class="markdown-body">${parseMd(tab.markdown)}</div>`;
+      reportPanels.appendChild(pane);
+    });
+
+    reportTabs.classList.remove('hidden');
+    switchReportTab(tabs[0].id);
+  }
+
+  /** 展开/收起分析流水列表 */
+  function setHistoryExpanded(expanded) {
+    if (!historyList) return;
+    historyList.classList.toggle('hidden', !expanded);
+    if (btnToggleHistory) btnToggleHistory.textContent = expanded ? '收起' : '展开';
+  }
+
+  /** 置信度统一为百分比文案 */
+  function formatConfidence(value) {
+    if (value == null || value === '') return '';
+    const n = Number(value);
+    if (Number.isNaN(n)) return String(value);
+    return n <= 1 ? `${Math.round(n * 100)}%` : `${Math.round(n)}%`;
+  }
+
+  /** 状态短标签 */
+  function formatJobStatus(status) {
+    return STATUS_LABELS[status] || (status ? String(status) : '');
+  }
+
+  /** 渲染本机分析流水行 */
+  function renderJobHistoryRows(items) {
+    if (!historyList) return;
+    historyList.innerHTML = '';
+
+    items.forEach((item, index) => {
+      const jobId = item.jobId || '';
+      if (!jobId) return;
+
+      const row = document.createElement('button');
+      row.type = 'button';
+      const isCurrent = !!(currentJobId && jobId === currentJobId);
+      row.className = isCurrent ? 'is-current' : '';
+
+      const when = formatTime(item.generatedAt || item.requestedAt) || '时间未知';
+      const sym = String(item.symbol || '').toUpperCase() || '未知标的';
+      const statusText = formatJobStatus(item.status);
+      const rating = item.rating || '';
+      const trend = item.trend || '';
+      const risk = item.riskLevel || '';
+      const conf = formatConfidence(item.confidence);
+      const metaParts = [
+        statusText ? `状态 ${statusText}` : '',
+        rating ? `观点 ${rating}` : '',
+        trend ? `趋势 ${trend}` : '',
+        risk ? `风险 ${risk}` : '',
+        conf ? `置信度 ${conf}` : '',
+      ].filter(Boolean);
+
+      row.innerHTML = `<div class="hist-title">`
+        + `<span class="hist-badge">#${items.length - index}</span>`
+        + `<span class="font-mono text-sky-300">${escapeText(sym)}</span>`
+        + `<span>${escapeText(when)}</span>`
+        + (isCurrent ? '<span class="hist-badge">当前</span>' : '')
+        + `</div>`
+        + (metaParts.length
+          ? `<div class="hist-meta">${escapeText(metaParts.join(' · '))}</div>`
+          : `<div class="hist-meta">点击回看该次分析报告</div>`);
+
+      row.addEventListener('click', () => {
+        if (isCurrent && isResultReady) {
+          if (reportContainer) {
+            reportContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+          return;
+        }
+        resumeJob(jobId, sym);
+      });
+      historyList.appendChild(row);
+    });
+  }
+
+  /**
+   * 展示本机分析流水（localStorage 中此前触发的任务）。
+   * @param {{ expand?: boolean, allowEmpty?: boolean, scrollIntoView?: boolean }} options
+   */
+  function showJobHistory(options = {}) {
+    const {
+      expand = true,
+      allowEmpty = true,
+      scrollIntoView = false,
+    } = options;
+
+    if (!historyPanel || !historyList) return;
+
+    const items = loadRecentJobs().filter((item) => item && item.jobId);
+    if (historySymbolEl) historySymbolEl.textContent = '本机最近记录';
+
+    if (!items.length) {
+      if (!allowEmpty) {
+        historyPanel.classList.add('hidden');
+        return;
+      }
       historyPanel.classList.remove('hidden');
-      historyList.classList.add('hidden');
-      if (btnToggleHistory) btnToggleHistory.textContent = '展开';
-    } catch (_) {
-      historyPanel.classList.add('hidden');
+      if (historyCountEl) historyCountEl.textContent = '0 条';
+      historyList.innerHTML = '';
+      if (historyEmptyEl) historyEmptyEl.classList.remove('hidden');
+      setHistoryExpanded(true);
+      if (scrollIntoView) {
+        historyPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    if (historyEmptyEl) historyEmptyEl.classList.add('hidden');
+    if (historyCountEl) historyCountEl.textContent = `共 ${items.length} 次`;
+    renderJobHistoryRows(items);
+    historyPanel.classList.remove('hidden');
+    setHistoryExpanded(expand);
+    if (scrollIntoView) {
+      historyPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
 
@@ -1464,23 +1652,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const reportMd = (data.report || '').trim();
     const marketMd = (data.marketReview || '').trim();
-
     const stockText = reportMd || (data.message || '').trim() || `# 股票 [${symbol}] AI 投研分析已完成\n\n暂无个股分析正文。`;
-    rawStockText = stockText;
-    rawMarketText = marketMd;
-    const parts = [`# 个股分析报告 · ${symbol}\n\n${stockText}`];
-    if (marketMd) parts.push(`# 市场复盘\n\n${marketMd}`);
-    rawReportText = parts.join('\n\n---\n\n');
 
     if (reportTitle) {
       reportTitle.textContent = `AI 投研报告 · ${symbol}`;
     }
 
-    renderMetricsSummary(data.metrics);
-
     if (reportMeta) {
-      const srcLabel = SOURCE_LABELS[data.source] || data.source || '云端';
-      if (metaSource) metaSource.textContent = `来源：${srcLabel}`;
       if (metaGenerated) {
         const t = formatTime(data.generatedAt);
         metaGenerated.textContent = t ? `生成于 ${t}` : '';
@@ -1493,90 +1671,24 @@ document.addEventListener('DOMContentLoaded', () => {
           ? data.metrics.degradedFeatures.filter(Boolean)
           : [];
         metaDegraded.textContent = degraded.length
-          ? `部分能力已降级：${degraded.join(', ')}`
+          ? `部分能力已降级：${degraded.join('、')}`
           : '';
       }
-      reportMeta.classList.remove('hidden');
+      const hasMeta = !!(
+        (metaGenerated && metaGenerated.textContent)
+        || (metaRunId && metaRunId.textContent)
+        || (metaDegraded && metaDegraded.textContent)
+      );
+      reportMeta.classList.toggle('hidden', !hasMeta);
     }
 
-    if (reportContent) {
-      reportContent.innerHTML = parseMd(stockText);
-    }
+    const stockSections = splitStockReportSections(stockText, symbol);
+    buildReportTabs(stockSections, marketMd);
+    // 报告就绪后刷新本机分析流水，默认折叠并标出当前任务
+    showJobHistory({ expand: false, allowEmpty: false });
 
-    const hasMarket = !!marketMd;
-    if (sectionMarketReview && marketReviewContent) {
-      if (hasMarket) {
-        marketReviewContent.innerHTML = parseMd(marketMd);
-        sectionMarketReview.classList.remove('hidden');
-        sectionMarketReview.style.display = '';
-      } else {
-        marketReviewContent.innerHTML = '';
-        sectionMarketReview.classList.add('hidden');
-      }
-    }
-
-    if (reportLayout) {
-      reportLayout.classList.toggle('has-market', hasMarket);
-    }
-    if (tabMarketBtn) {
-      tabMarketBtn.classList.toggle('hidden', !hasMarket);
-    }
-    if (btnCopyMarket) {
-      btnCopyMarket.classList.toggle('hidden', !hasMarket);
-    }
-
-    buildTocFromCombined();
-    switchReportTab('stock');
-    loadSymbolHistory(symbol);
-
-    if (emptyState)      emptyState.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
     if (reportContainer) reportContainer.classList.remove('hidden');
-  }
-
-  function buildTocFromCombined() {
-    if (!reportToc) return;
-    const nodes = [];
-    if (reportContent) {
-      reportContent.querySelectorAll('h1, h2').forEach((el) => nodes.push(el));
-    }
-    if (marketReviewContent && sectionMarketReview && !sectionMarketReview.classList.contains('hidden')) {
-      marketReviewContent.querySelectorAll('h1, h2').forEach((el) => nodes.push(el));
-    }
-    if (!nodes.length) {
-      reportToc.classList.add('hidden');
-      reportToc.innerHTML = '';
-      return;
-    }
-
-    const frag = document.createDocumentFragment();
-    const used = new Set();
-    nodes.forEach((el, idx) => {
-      let id = el.id || slugify(el.textContent) || `h-${idx}`;
-      const base = id;
-      let n = 1;
-      while (used.has(id) || (document.getElementById(id) && document.getElementById(id) !== el)) {
-        id = `${base}-${n++}`;
-      }
-      used.add(id);
-      el.id = id;
-
-      const a = document.createElement('a');
-      a.href = `#${id}`;
-      a.textContent = el.textContent;
-      if (el.tagName === 'H2') a.classList.add('toc-h2');
-      a.addEventListener('click', (ev) => {
-        ev.preventDefault();
-        const inMarket = marketReviewContent && marketReviewContent.contains(el);
-        if (inMarket) switchReportTab('market');
-        else switchReportTab('stock');
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-      frag.appendChild(a);
-    });
-
-    reportToc.innerHTML = '';
-    reportToc.appendChild(frag);
-    reportToc.classList.remove('hidden');
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }

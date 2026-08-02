@@ -82,6 +82,39 @@ main > section:first-child .animate-on-scroll {
   animation: slideDown 0.3s ease-out forwards;
 }
 
+/* 手机菜单按钮：保证可点可看见（图标库加载失败时不塌成 0×0） */
+#mobile-menu-btn,
+.mobile-menu-btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.55rem;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 1rem;
+  line-height: 1;
+}
+#mobile-menu-btn .menu-btn-fallback,
+.mobile-menu-btn .menu-btn-fallback {
+  display: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+/* 图标字体未生效时显示「菜单」文字兜底 */
+#mobile-menu-btn.fa-missing .menu-btn-fallback,
+.mobile-menu-btn.fa-missing .menu-btn-fallback {
+  display: inline;
+}
+#mobile-menu-btn.fa-missing i,
+.mobile-menu-btn.fa-missing i {
+  display: none;
+}
+
 /* Utility for delay */
 .delay-100 { transition-delay: 100ms; animation-delay: 100ms; }
 .delay-200 { transition-delay: 200ms; animation-delay: 200ms; }
