@@ -1,0 +1,17 @@
+{
+  "symbol": "01787,09618",
+  "updatedAt": 1785643216415,
+  "jobs": [
+    {
+      "jobId": "job_msb9nrva_dd1e6e27b612",
+      "symbol": "01787,09618",
+      "generatedAt": 1785643212461,
+      "runId": "30731430375",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "偏多",
+      "confidence": 0.55
+    }
+  ]
+}
