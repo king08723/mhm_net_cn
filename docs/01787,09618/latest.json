@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msb9nrva_dd1e6e27b612",
+  "symbol": "01787,09618",
+  "generatedAt": 1785643212461,
+  "runId": "30731430375",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "持有",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msb9nrva_dd1e6e27b612/report.md",
+    "marketReview": "jobs/job_msb9nrva_dd1e6e27b612/market_review.md",
+    "manifest": "jobs/job_msb9nrva_dd1e6e27b612/manifest.json",
+    "metrics": "jobs/job_msb9nrva_dd1e6e27b612/metrics.json"
+  }
+}
