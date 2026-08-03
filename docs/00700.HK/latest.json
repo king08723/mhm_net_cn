@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msd5pzia_268de6d26615",
+  "symbol": "00700.HK",
+  "generatedAt": 1785757515441,
+  "runId": "30810412951",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msd5pzia_268de6d26615/report.md",
+    "marketReview": "jobs/job_msd5pzia_268de6d26615/market_review.md",
+    "manifest": "jobs/job_msd5pzia_268de6d26615/manifest.json",
+    "metrics": "jobs/job_msd5pzia_268de6d26615/metrics.json"
+  }
+}
