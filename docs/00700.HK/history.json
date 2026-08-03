@@ -1,0 +1,17 @@
+{
+  "symbol": "00700.HK",
+  "updatedAt": 1785757521182,
+  "jobs": [
+    {
+      "jobId": "job_msd5pzia_268de6d26615",
+      "symbol": "00700.HK",
+      "generatedAt": 1785757515441,
+      "runId": "30810412951",
+      "status": "succeeded",
+      "rating": "观望",
+      "riskLevel": "中",
+      "trend": "震荡",
+      "confidence": 0.55
+    }
+  ]
+}
