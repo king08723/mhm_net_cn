@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msdinx5l_e8f4158386f4",
+  "symbol": "AAPL",
+  "generatedAt": 1785779164898,
+  "runId": "30837928565",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msdinx5l_e8f4158386f4/report.md",
+    "marketReview": "jobs/job_msdinx5l_e8f4158386f4/market_review.md",
+    "manifest": "jobs/job_msdinx5l_e8f4158386f4/manifest.json",
+    "metrics": "jobs/job_msdinx5l_e8f4158386f4/metrics.json"
+  }
+}
