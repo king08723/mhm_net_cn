@@ -1,0 +1,17 @@
+{
+  "symbol": "00285.HK",
+  "updatedAt": 1785887149646,
+  "jobs": [
+    {
+      "jobId": "job_msfaxdbd_6066e069b35f",
+      "symbol": "00285.HK",
+      "generatedAt": 1785887143247,
+      "runId": "30960808511",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "偏多",
+      "confidence": 0.55
+    }
+  ]
+}
