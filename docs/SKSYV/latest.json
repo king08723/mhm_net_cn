@@ -1,0 +1,16 @@
+{
+  "jobId": "job_msngcfhq_268de6d26615",
+  "symbol": "SKSYV",
+  "generatedAt": 1786379974412,
+  "runId": "31409694444",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "观望",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_msngcfhq_268de6d26615/report.md",
+    "marketReview": "jobs/job_msngcfhq_268de6d26615/market_review.md",
+    "manifest": "jobs/job_msngcfhq_268de6d26615/manifest.json",
+    "metrics": "jobs/job_msngcfhq_268de6d26615/metrics.json"
+  }
+}
