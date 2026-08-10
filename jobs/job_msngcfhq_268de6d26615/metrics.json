@@ -1,0 +1,14 @@
+{
+  "rating": "观望",
+  "confidence": 0.55,
+  "trend": "震荡",
+  "supportLevels": [],
+  "resistanceLevels": [],
+  "riskLevel": "中",
+  "dataAsOf": 1786379974412,
+  "modelVersion": "report-heuristic-v2",
+  "realtimeEnabled": false,
+  "degradedFeatures": [],
+  "symbol": "SKSYV",
+  "source": "report-heuristic"
+}
