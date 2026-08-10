@@ -1,0 +1,17 @@
+{
+  "symbol": "SKSYV",
+  "updatedAt": 1786379980765,
+  "jobs": [
+    {
+      "jobId": "job_msngcfhq_268de6d26615",
+      "symbol": "SKSYV",
+      "generatedAt": 1786379974412,
+      "runId": "31409694444",
+      "status": "succeeded",
+      "rating": "观望",
+      "riskLevel": "中",
+      "trend": "震荡",
+      "confidence": 0.55
+    }
+  ]
+}
