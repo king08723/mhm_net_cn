@@ -1,0 +1,18 @@
+{
+  "rating": "观望",
+  "confidence": 0.55,
+  "trend": "震荡",
+  "supportLevels": [
+    24.3
+  ],
+  "resistanceLevels": [
+    24.3
+  ],
+  "riskLevel": "中",
+  "dataAsOf": 1787147574793,
+  "modelVersion": "report-heuristic-v2",
+  "realtimeEnabled": false,
+  "degradedFeatures": [],
+  "symbol": "01818.HK,02899.HK,XAUUSD",
+  "source": "report-heuristic"
+}
