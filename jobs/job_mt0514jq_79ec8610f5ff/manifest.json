@@ -1,0 +1,20 @@
+{
+  "jobId": "job_mt0514jq_79ec8610f5ff",
+  "symbol": "01818.HK,02899.HK,XAUUSD",
+  "status": "running",
+  "phase": "checkout",
+  "phaseMessage": "正在检出代码与准备仓库…（通常约 15–30 秒）",
+  "runId": "32259308941",
+  "updatedAt": 1787146762304,
+  "generatedAt": 0,
+  "finishedAt": 0,
+  "reportSha": "",
+  "marketReviewSha": "",
+  "reportLength": 0,
+  "marketReviewLength": 0,
+  "metricsSha": "",
+  "metricsLength": 0,
+  "hasMetrics": false,
+  "error": "",
+  "errorCode": ""
+}
