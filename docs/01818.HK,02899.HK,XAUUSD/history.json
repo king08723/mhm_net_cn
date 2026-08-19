@@ -1,0 +1,17 @@
+{
+  "symbol": "01818.HK,02899.HK,XAUUSD",
+  "updatedAt": 1787147583560,
+  "jobs": [
+    {
+      "jobId": "job_mt0514jq_79ec8610f5ff",
+      "symbol": "01818.HK,02899.HK,XAUUSD",
+      "generatedAt": 1787147574793,
+      "runId": "32259308941",
+      "status": "succeeded",
+      "rating": "观望",
+      "riskLevel": "中",
+      "trend": "震荡",
+      "confidence": 0.55
+    }
+  ]
+}
