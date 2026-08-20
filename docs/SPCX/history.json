@@ -1,0 +1,17 @@
+{
+  "symbol": "SPCX",
+  "updatedAt": 1787242643496,
+  "jobs": [
+    {
+      "jobId": "job_mt1psk9n_170256d947be",
+      "symbol": "SPCX",
+      "generatedAt": 1787242635817,
+      "runId": "32390260992",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    }
+  ]
+}
