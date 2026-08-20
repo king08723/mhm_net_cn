@@ -1,0 +1,22 @@
+{
+  "jobId": "job_mt1psk9n_170256d947be",
+  "symbol": "SPCX",
+  "product": "tradingagents",
+  "engine": "tradingagents",
+  "status": "running",
+  "phase": "checkout",
+  "phaseMessage": "正在检出代码与准备仓库…（通常约 15–30 秒）",
+  "runId": "32390260992",
+  "updatedAt": 1787242098887,
+  "generatedAt": 0,
+  "finishedAt": 0,
+  "reportSha": "",
+  "marketReviewSha": "",
+  "reportLength": 0,
+  "marketReviewLength": 0,
+  "metricsSha": "",
+  "metricsLength": 0,
+  "hasMetrics": false,
+  "error": "",
+  "errorCode": ""
+}
