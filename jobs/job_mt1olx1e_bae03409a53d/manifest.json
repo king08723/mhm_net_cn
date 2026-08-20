@@ -3,13 +3,13 @@
   "symbol": "DELL",
   "product": "tradingagents",
   "engine": "tradingagents",
-  "status": "running",
-  "phase": "publish",
-  "phaseMessage": "正在整理摘要并发布研究报告…（通常约 20–40 秒）",
+  "status": "failed",
+  "phase": "failed",
+  "phaseMessage": "分析失败",
   "runId": "32386994590",
-  "updatedAt": 1787240162923,
+  "updatedAt": 1787240164418,
   "generatedAt": 0,
-  "finishedAt": 0,
+  "finishedAt": 1787240164418,
   "reportSha": "",
   "marketReviewSha": "",
   "reportLength": 0,
@@ -17,6 +17,6 @@
   "metricsSha": "",
   "metricsLength": 0,
   "hasMetrics": false,
-  "error": "",
-  "errorCode": ""
+  "error": "Actions 作业未成功完成",
+  "errorCode": "ANALYSIS_FAILED"
 }
