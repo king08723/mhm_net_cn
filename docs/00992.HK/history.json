@@ -1,0 +1,17 @@
+{
+  "symbol": "00992.HK",
+  "updatedAt": 1787238237935,
+  "jobs": [
+    {
+      "jobId": "job_mt1ndpkd_b0b61e574471",
+      "symbol": "00992.HK",
+      "generatedAt": 1787238230540,
+      "runId": "32383561534",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "偏多",
+      "confidence": 0.55
+    }
+  ]
+}
