@@ -1,0 +1,16 @@
+{
+  "jobId": "job_mt1ndpkd_b0b61e574471",
+  "symbol": "00992.HK",
+  "generatedAt": 1787238230540,
+  "runId": "32383561534",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "持有",
+  "riskLevel": "中",
+  "paths": {
+    "report": "jobs/job_mt1ndpkd_b0b61e574471/report.md",
+    "marketReview": "jobs/job_mt1ndpkd_b0b61e574471/market_review.md",
+    "manifest": "jobs/job_mt1ndpkd_b0b61e574471/manifest.json",
+    "metrics": "jobs/job_mt1ndpkd_b0b61e574471/metrics.json"
+  }
+}
