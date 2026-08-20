@@ -35,6 +35,53 @@ def _apply_quant_params_to_env() -> None:
         os.environ["TRADINGAGENTS_OUTPUT_LANGUAGE"] = lang_map.get(lang, "Chinese")
 
 
+def _env_nonempty(*names: str) -> bool:
+    return any((os.environ.get(n) or "").strip() for n in names)
+
+
+def _ensure_llm_provider_env() -> None:
+    """未显式配置 TRADINGAGENTS_LLM_PROVIDER 时，按已有 Key 自动选择。
+
+    TradingAgents 默认 provider=openai；本站常只配 GEMINI/GOOGLE，不配 OPENAI，
+    会导致开跑即 ValueError。须在 import DEFAULT_CONFIG 之前写入环境变量。
+    """
+    # Gemini 与 Google 客户端共用 GOOGLE_API_KEY
+    if not (os.environ.get("GOOGLE_API_KEY") or "").strip():
+        gemini = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEYS") or "").strip()
+        if gemini:
+            # 多 key 时只取第一个
+            os.environ["GOOGLE_API_KEY"] = gemini.split(",")[0].strip()
+
+    if (os.environ.get("TRADINGAGENTS_LLM_PROVIDER") or "").strip():
+        return
+
+    # 优先级：google → openai → anthropic → deepseek → xai
+    choice = None
+    if _env_nonempty("GOOGLE_API_KEY", "GEMINI_API_KEY", "GEMINI_API_KEYS"):
+        choice = "google"
+        os.environ.setdefault("TRADINGAGENTS_DEEP_THINK_LLM", "gemini-2.5-pro")
+        os.environ.setdefault("TRADINGAGENTS_QUICK_THINK_LLM", "gemini-2.5-flash")
+    elif _env_nonempty("OPENAI_API_KEY", "OPENAI_API_KEYS"):
+        choice = "openai"
+    elif _env_nonempty("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEYS"):
+        choice = "anthropic"
+    elif _env_nonempty("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEYS"):
+        choice = "deepseek"
+    elif _env_nonempty("XAI_API_KEY"):
+        choice = "xai"
+
+    if choice:
+        os.environ["TRADINGAGENTS_LLM_PROVIDER"] = choice
+        print(f"ℹ️ 未设置 TRADINGAGENTS_LLM_PROVIDER，按可用密钥自动选择: {choice}")
+    else:
+        print(
+            "⚠️ 未检测到 OPENAI/GOOGLE/ANTHROPIC/DEEPSEEK/XAI API Key；"
+            "TradingAgents 可能在初始化时失败。请在 mhm_net_cn Secrets 配置至少一个，"
+            "或设置 Variables.TRADINGAGENTS_LLM_PROVIDER。",
+            file=sys.stderr,
+        )
+
+
 def main() -> int:
     # 确保当前目录（上游根）可被 import
     cwd = Path.cwd().resolve()
@@ -42,6 +89,8 @@ def main() -> int:
         sys.path.insert(0, str(cwd))
 
     _apply_quant_params_to_env()
+    # 必须在 import DEFAULT_CONFIG 之前（其模块加载时会读 TRADINGAGENTS_*）
+    _ensure_llm_provider_env()
 
     from tradingagents.default_config import DEFAULT_CONFIG
     from tradingagents.graph.trading_graph import TradingAgentsGraph

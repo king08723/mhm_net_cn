@@ -55,6 +55,7 @@ import {
   setPanelIcon as setPanelIconUi,
   setBadge as setBadgeUi,
   markFirstStepError,
+  markStepError,
   setQuantFocus,
   setProgressCollapsed,
   setActiveSteps,
@@ -1177,6 +1178,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setBtnState('idle');
     applyProgress(currentProgress);
 
+    // 失败时把当前阶段步骤标红，避免仍停在「多智能体辩论」脉冲态
+    {
+      const phase = (data && data.phase && data.phase !== 'failed' && data.phase !== 'timeout')
+        ? data.phase
+        : (lastPhase || 'analyze');
+      const idx = Object.prototype.hasOwnProperty.call(PHASE_STEP_INDEX, phase)
+        ? PHASE_STEP_INDEX[phase]
+        : (PHASE_STEP_INDEX.analyze ?? VIRTUAL_HOLD_STEP_INDEX);
+      if (typeof idx === 'number' && idx >= 0) markStepError(idx);
+      else markFirstStepError();
+    }
+
     lastActionsUrl = (data && data.actionsUrl) || lastActionsUrl;
     lastManifestUrl = (data && (data.manifestUrl || (data.resultFiles && data.resultFiles.manifestUrl))) || lastManifestUrl;
     saveRecentJob({
@@ -1191,7 +1204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setStatusMessage(panelMessage, [
       { text: errMsg, tone: 'error' },
       { br: true },
-      { text: '分析服务繁忙或任务异常，请稍后重试；也可返回本页继续查看。', tone: 'info', opacity: 0.8, size: '0.8rem' },
+      { text: '任务已失败终止。可查看 Actions 日志排查，或稍后重试。', tone: 'info', opacity: 0.8, size: '0.8rem' },
     ]);
   }
 

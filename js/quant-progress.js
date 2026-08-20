@@ -213,14 +213,49 @@ export function setBadge(panelBadge, state) {
 }
 
 export function markFirstStepError() {
-  const first = activeSteps[0];
-  if (!first) return;
-  const iconEl = document.getElementById(`step-icon-${first.id}`);
-  if (!iconEl) return;
-  iconEl.style.borderColor = 'rgba(239,68,68,0.5)';
-  iconEl.style.background = 'rgba(239,68,68,0.15)';
-  iconEl.style.color = '#f87171';
-  iconEl.innerHTML = iconHtml('xmark', { size: 12 });
+  markStepError(0);
+}
+
+/**
+ * 将指定步骤标为失败（停止脉冲），之前步骤保持完成态。
+ * @param {number} stepIndex
+ */
+export function markStepError(stepIndex) {
+  const idx = Math.max(0, Math.min(Number(stepIndex) || 0, activeSteps.length - 1));
+  activeSteps.forEach((step, i) => {
+    const iconEl = document.getElementById(`step-icon-${step.id}`);
+    const labelEl = document.getElementById(`step-label-${step.id}`);
+    const descEl = document.getElementById(`step-desc-${step.id}`);
+    const connEl = document.getElementById(`step-conn-${step.id}`);
+    if (!iconEl) return;
+    if (i < idx) {
+      iconEl.style.borderColor = '#22c55e';
+      iconEl.style.background = 'rgba(34,197,94,0.15)';
+      iconEl.style.color = '#22c55e';
+      iconEl.innerHTML = iconHtml('check', { size: 12 });
+      if (connEl) connEl.style.height = '100%';
+      if (labelEl) labelEl.style.color = '#86efac';
+      if (descEl) descEl.style.display = 'none';
+    } else if (i === idx) {
+      iconEl.style.borderColor = 'rgba(239,68,68,0.5)';
+      iconEl.style.background = 'rgba(239,68,68,0.15)';
+      iconEl.style.color = '#f87171';
+      iconEl.innerHTML = iconHtml('xmark', { size: 12 });
+      if (labelEl) labelEl.style.color = '#fca5a5';
+      if (descEl) {
+        descEl.style.display = 'block';
+        descEl.textContent = '本阶段失败，任务已终止';
+        descEl.style.color = '#fca5a5';
+      }
+    } else {
+      iconEl.style.borderColor = 'rgba(255,255,255,0.12)';
+      iconEl.style.background = 'rgba(255,255,255,0.04)';
+      iconEl.style.color = '#4b6a8a';
+      iconEl.innerHTML = iconHtml(step.icon, { size: 12 });
+      if (labelEl) labelEl.style.color = '#4b6a8a';
+      if (descEl) descEl.style.display = 'none';
+    }
+  });
 }
 
 /** 分析中隐藏营销；完成后折叠进度详情 */
