@@ -258,7 +258,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnAnalyze) btnAnalyze.addEventListener('click', handleAnalyze);
   if (btnBackHub) btnBackHub.addEventListener('click', () => showHub({ keepJob: true }));
   if (symbolInput) {
-    symbolInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAnalyze(); });
+    symbolInput.addEventListener('keydown', (e) => {
+      // 单标的产品：禁止用分隔键继续输入第二只
+      if (!productAllowsMultiSymbols() && (e.key === ',' || e.key === '，' || e.key === '、' || e.key === ';' || e.key === '；')) {
+        e.preventDefault();
+        showInputHint('当前产品仅支持一只股票');
+        return;
+      }
+      if (e.key === 'Enter') handleAnalyze();
+    });
+    symbolInput.addEventListener('input', () => {
+      sanitizeSymbolInputForProduct({ announce: true });
+    });
+    symbolInput.addEventListener('paste', () => {
+      // paste 后值尚未写入，等下一帧再清洗
+      requestAnimationFrame(() => sanitizeSymbolInputForProduct({ announce: true }));
+    });
   }
   if (reportTabs) {
     reportTabs.addEventListener('click', (e) => {
@@ -436,7 +451,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toolHero) toolHero.classList.add('hidden');
     if (workspaceLock) workspaceLock.classList.add('hidden');
     setProductInUrl('', { clearJob: !keepJob && !currentJobId });
-    // 回到 Hub 时若仍在轮询，保留进度面板；否则不强制隐藏
+    // Hub 无工作区产品，隐藏分析流水
+    if (historyPanel) historyPanel.classList.add('hidden');
   }
 
   /**
@@ -465,6 +481,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (symbolInput) symbolInput.placeholder = product.symbolPlaceholder || '';
     if (symbolHint) symbolHint.textContent = product.symbolHint || '';
+    // 单标的产品：立刻清洗输入框，并限制分隔符
+    sanitizeSymbolInputForProduct({ announce: false });
+    if (symbolInput) {
+      symbolInput.setAttribute(
+        'data-multi-symbols',
+        productAllowsMultiSymbols() ? '1' : '0',
+      );
+    }
 
     const caps = product.capabilities || {};
     const setWrap = (el, show) => {
@@ -498,6 +522,35 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAnalyze) btnAnalyze.disabled = locked;
 
     if (!opts.skipUrl) setProductInUrl(product.id);
+
+    // 分析流水按当前产品过滤
+    showJobHistory({ expand: false, allowEmpty: false });
+  }
+
+  /** 当前产品是否允许多标的 */
+  function productAllowsMultiSymbols() {
+    const product = getProduct(currentProductId);
+    return !!(product && product.capabilities && product.capabilities.multiSymbols);
+  }
+
+  /**
+   * 单标的产品：输入过程中禁止留下多只股票（逗号/顿号/空格分隔）
+   * @param {{ announce?: boolean }} opts
+   */
+  function sanitizeSymbolInputForProduct(opts = {}) {
+    if (!symbolInput || productAllowsMultiSymbols()) return;
+    const raw = symbolInput.value;
+    if (!raw) return;
+    // 任一常见分隔符出现，则只保留第一段有效代码
+    if (!/[,\s，、;；]+/.test(raw)) return;
+    const first = (normalizeSymbols(raw)[0] || '').trim();
+    if (raw === first) return;
+    symbolInput.value = first;
+    try {
+      const pos = first.length;
+      symbolInput.setSelectionRange(pos, pos);
+    } catch (_) { /* ignore */ }
+    if (opts.announce) showInputHint('当前产品仅支持一只股票');
   }
 
   function readProductFromUrl() {
@@ -555,6 +608,18 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {
       return [];
     }
+  }
+
+  /** 旧记录无 product 时归入标准投研（dsa） */
+  function jobProductId(item) {
+    return String((item && item.product) || DEFAULT_PRODUCT_ID).trim().toLowerCase() || DEFAULT_PRODUCT_ID;
+  }
+
+  /** 仅当前工作区产品的本机历史 */
+  function loadRecentJobsForCurrentProduct() {
+    const pid = String(currentProductId || '').trim().toLowerCase();
+    if (!pid) return [];
+    return loadRecentJobs().filter((item) => item && item.jobId && jobProductId(item) === pid);
   }
 
   function saveRecentJob(entry) {
@@ -1195,9 +1260,11 @@ document.addEventListener('DOMContentLoaded', () => {
     saveRecentJob({
       jobId: (data && data.jobId) || currentJobId,
       symbol: (data && data.symbol) || (panelSymbol && panelSymbol.textContent) || '',
+      product: (data && data.product) || currentProductId || DEFAULT_PRODUCT_ID,
       status: (data && data.status) || 'failed',
       requestedAt: (data && data.requestedAt) || Date.now(),
     });
+    showJobHistory({ expand: false, allowEmpty: false });
 
     const statusLabel = STATUS_LABELS[data && data.status] || '失败';
     const errMsg = (data && data.error) || `分析${statusLabel}`;
@@ -1458,8 +1525,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!historyPanel || !historyList) return;
 
-    const items = loadRecentJobs().filter((item) => item && item.jobId);
-    if (historySymbolEl) historySymbolEl.textContent = '本机最近记录';
+    // Hub 无产品时不展示流水
+    if (!currentProductId) {
+      historyPanel.classList.add('hidden');
+      return;
+    }
+
+    const product = getProduct(currentProductId);
+    const items = loadRecentJobsForCurrentProduct();
+    if (historySymbolEl) {
+      historySymbolEl.textContent = product
+        ? `本机 · ${product.title}`
+        : '本机最近记录';
+    }
 
     if (!items.length) {
       if (!allowEmpty) {
@@ -1469,7 +1547,12 @@ document.addEventListener('DOMContentLoaded', () => {
       historyPanel.classList.remove('hidden');
       if (historyCountEl) historyCountEl.textContent = '0 条';
       historyList.innerHTML = '';
-      if (historyEmptyEl) historyEmptyEl.classList.remove('hidden');
+      if (historyEmptyEl) {
+        historyEmptyEl.classList.remove('hidden');
+        historyEmptyEl.textContent = product
+          ? `暂无「${product.title}」分析记录。完成本产品一次分析后会出现在这里（保存在本浏览器）。`
+          : '暂无分析记录。完成一次分析后会出现在这里（保存在本浏览器）。';
+      }
       setHistoryExpanded(true);
       if (scrollIntoView) {
         historyPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
