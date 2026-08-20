@@ -8,7 +8,7 @@
 | Phase / metrics / history | 全部在本仓 `scripts/` + `.github/workflows/` |
 | 前端 / 云函数契约 | 仍只认 `jobs/{jobId}/*` |
 
-**结论**：编排与结果归属 `king08723/mhm_net_cn`；上游只提供可执行源码。
+**结论**：编排与结果归属 `king08723/mhm_net_cn`；上游（DSA / TradingAgents）只提供可执行源码。
 
 ## 本仓职责（仅两件）
 
@@ -26,7 +26,7 @@
 
 ## 从上游升级 checklist
 
-1. 默认每次 run 拉取 `vars.UPSTREAM_REF`（或 input `upstream_ref`，默认 `main`）
+1. 默认每次 run 拉取 `vars.UPSTREAM_REF`（或 input `upstream_ref`；DSA 缺省 **`dev`**）
 2. 若上游改了 CLI / 环境变量名：只改本仓 `run_quant_analysis.sh` 与 workflow 的 `env:` 映射
 3. 冒烟：quant 页触发 → `phaseSource=github-manifest` → 成功有 `metrics.json`
 4. 结果路径：`https://raw.githubusercontent.com/king08723/mhm_net_cn/analysis-results/jobs/{jobId}/manifest.json`
@@ -53,12 +53,24 @@ GitHub **不能**让 `mhm_net_cn` 的 Actions 直接读取 `daily_stock_analysis
 workflow 已按旧仓同名映射；**没配的项就是空，不用刻意凑齐上游 YAML 里那上百个名字**。  
 若旧仓还用了 Environment（例如 `STOCK_LIST`），也要看 Environment 里有没有额外变量。
 
-### 可选：一条 QUANT_ENV_B64
+### 可选：一条 QUANT_ENV / QUANT_ENV_B64
 
-若你后来自己整理出一份 `KEY=VALUE` 文件，也可用 `scripts/sync_quant_env_secret.sh` 写成一条 Secret；与逐条配置可并存。
+若你后来自己整理出一份 `KEY=VALUE` 文件，也可用 `scripts/sync_quant_env_secret.sh` 写成一条 Secret（明文 `QUANT_ENV` 或 Base64 `QUANT_ENV_B64`）；workflow 经 `scripts/inject_quant_env.sh` 注入，与逐条配置可并存。
 
-可选 Variables：`UPSTREAM_REPO` / `UPSTREAM_REF` / `ANALYSIS_TIMEOUT_MINUTES`。  
+可选 Variables：`UPSTREAM_REPO` / `UPSTREAM_REF`（DSA 默认 ref=`dev`）/ `ANALYSIS_TIMEOUT_MINUTES`。  
 uniCloud `GITHUB_PAT` 需对 **`mhm_net_cn`** 有 `actions:write`。
+
+## TradingAgents 引擎（新增）
+
+| 项 | 说明 |
+|----|------|
+| Variables `TA_UPSTREAM_REPO` / `TA_UPSTREAM_REF` | 默认 `king08723/TradingAgents` @ `dev` |
+| Variables `ANALYSIS_TIMEOUT_MINUTES` | 建议 `60` |
+| Secrets | 至少一个 LLM Key（可复用 `OPENAI_API_KEY`）；可选 `ALPHA_VANTAGE_API_KEY`、`TRADINGAGENTS_*` |
+| 脚本 | `run_tradingagents.py`、`adapt_ta_to_job.py`、`ticker_normalize.py` |
+| 结果契约 | 仍写入 `jobs/{jobId}/*`（与 DSA 相同） |
+
+---
 
 ## 契约（勿破坏）
 

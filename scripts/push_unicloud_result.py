@@ -155,6 +155,8 @@ def build_manifest(
     return {
         "jobId": job_id,
         "symbol": symbol.upper(),
+        "product": (os.environ.get("QUANT_PRODUCT") or "").strip().lower(),
+        "engine": (os.environ.get("QUANT_ENGINE") or "").strip().lower(),
         "status": status,
         "phase": resolved_phase,
         "phaseMessage": msg,
@@ -195,6 +197,8 @@ def build_phase_manifest(
     return {
         "jobId": job_id,
         "symbol": (symbol or "").upper(),
+        "product": (os.environ.get("QUANT_PRODUCT") or "").strip().lower(),
+        "engine": (os.environ.get("QUANT_ENGINE") or "").strip().lower(),
         "status": status,
         "phase": phase,
         "phaseMessage": msg,

@@ -28,6 +28,15 @@ import {
   PHASE_ETA,
 } from './quant-config.js';
 
+import {
+  QUANT_PRODUCTS,
+  DEFAULT_PRODUCT_ID,
+  resolveEntitlements,
+  assertProductAllowed,
+  getProduct,
+  getProgressProfile,
+} from './quant-catalog.js';
+
 import { setIcon } from './quant-icons.js';
 import {
   unwrapGatewayJson,
@@ -48,6 +57,8 @@ import {
   markFirstStepError,
   setQuantFocus,
   setProgressCollapsed,
+  setActiveSteps,
+  getActiveSteps,
 } from './quant-progress.js';
 import {
   formatTime,
@@ -63,6 +74,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // =====================================================================
   // DOM 引用
   // =====================================================================
+  const productHub = document.getElementById('product-hub');
+  const productHubCards = document.getElementById('product-hub-cards');
+  const toolHero = document.getElementById('tool-hero');
+  const btnBackHub = document.getElementById('btn-back-hub');
+  const productBadge = document.getElementById('product-badge');
+  const workspaceTitle = document.getElementById('workspace-title');
+  const workspaceDesc = document.getElementById('workspace-desc');
+  const workspaceLock = document.getElementById('workspace-lock');
+  const workspaceLockMsg = document.getElementById('workspace-lock-msg');
+  const symbolHint = document.getElementById('symbol-hint');
+  const modeSelectWrap = document.getElementById('mode-select-wrap');
+  const optMarketContextWrap = document.getElementById('opt-market-context-wrap');
+  const optRealtimeQuoteWrap = document.getElementById('opt-realtime-quote-wrap');
+  const optRealtimeTechWrap = document.getElementById('opt-realtime-tech-wrap');
+  const optChipDistWrap = document.getElementById('opt-chip-dist-wrap');
+  const advancedHint = document.getElementById('advanced-hint');
+
   const symbolInput = document.getElementById('symbol-input');
   const modeSelect = document.getElementById('mode-select');
   const reportTypeSelect = document.getElementById('report-type-select');
@@ -122,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentProgress = 0;
   let isResultReady = false;
   let currentJobId = '';
+  let currentProductId = '';
   let lastPhase = '';
   let usePhaseProgress = false;
   let lastPhaseSource = 'simulated';
@@ -133,6 +162,35 @@ document.addEventListener('DOMContentLoaded', () => {
   let analyzeSimQueue = [];
   let analyzeSimLast = '';
   let startTime = 0;
+  /** 当前产品进度配置（由 getProgressProfile 填充） */
+  let progressProfile = getProgressProfile(DEFAULT_PRODUCT_ID);
+  const entitlements = resolveEntitlements(null);
+
+  function activePhaseEta() {
+    return progressProfile.phaseEta || PHASE_ETA;
+  }
+
+  function activeProgressCap() {
+    return progressProfile.virtualProgressCap != null
+      ? progressProfile.virtualProgressCap
+      : VIRTUAL_PROGRESS_CAP;
+  }
+
+  function activeVirtualStepSeconds() {
+    return progressProfile.virtualStepSeconds || VIRTUAL_STEP_SECONDS;
+  }
+
+  function activeAnalyzeMessages() {
+    return progressProfile.analyzeMessages || ANALYZE_SIM_MESSAGES;
+  }
+
+  function activePollDeadlineMs() {
+    return progressProfile.pollDeadlineMs || POLL_DEADLINE_MS;
+  }
+
+  function activeStepsList() {
+    return getActiveSteps() || progressProfile.steps || STEPS;
+  }
 
   function isDebugMode() {
     try {
@@ -197,6 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ---------- 事件绑定 ----------
   if (btnAnalyze) btnAnalyze.addEventListener('click', handleAnalyze);
+  if (btnBackHub) btnBackHub.addEventListener('click', () => showHub({ keepJob: true }));
   if (symbolInput) {
     symbolInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleAnalyze(); });
   }
@@ -265,8 +324,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function collectAnalysisOptions() {
-    return {
+    const product = getProduct(currentProductId) || getProduct(DEFAULT_PRODUCT_ID);
+    const caps = (product && product.capabilities) || {};
+    const options = {
       ...DEFAULT_ANALYSIS_OPTIONS,
+      product: product ? product.id : DEFAULT_PRODUCT_ID,
+      engine: product ? product.engine : 'dsa',
       mode: readSelectValue(modeSelect, ['full', 'market-only', 'stocks-only'], DEFAULT_ANALYSIS_OPTIONS.mode),
       reportType: readSelectValue(reportTypeSelect, ['brief', 'simple', 'full'], DEFAULT_ANALYSIS_OPTIONS.reportType),
       reportLanguage: readSelectValue(reportLanguageSelect, ['zh', 'en', 'ko'], DEFAULT_ANALYSIS_OPTIONS.reportLanguage),
@@ -276,7 +339,172 @@ document.addEventListener('DOMContentLoaded', () => {
       enableRealtimeQuote: readCheckbox(optRealtimeQuote, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeQuote),
       enableRealtimeTechnicalIndicators: readCheckbox(optRealtimeTech, DEFAULT_ANALYSIS_OPTIONS.enableRealtimeTechnicalIndicators),
       enableChipDistribution: readCheckbox(optChipDist, DEFAULT_ANALYSIS_OPTIONS.enableChipDistribution),
+      multiSymbols: !!caps.multiSymbols,
     };
+
+    // TradingAgents：强制单标的、仅个股、关闭 DSA 专属增强
+    if (product && product.id === 'tradingagents') {
+      options.multiSymbols = false;
+      options.mode = 'stocks-only';
+      options.includeMarketContext = false;
+      options.enableRealtimeQuote = false;
+      options.enableRealtimeTechnicalIndicators = false;
+      options.enableChipDistribution = false;
+    }
+    return options;
+  }
+
+  /**
+   * 渲染产品入口卡片
+   */
+  function renderProductHub() {
+    if (!productHubCards) return;
+    productHubCards.replaceChildren();
+    QUANT_PRODUCTS.forEach((product) => {
+      const gate = assertProductAllowed(product.id, entitlements);
+      const locked = !product.enabled || !gate.ok;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = [
+        'text-left rounded-xl border p-4 transition-colors',
+        locked
+          ? 'border-white/10 bg-[#081624]/50 opacity-70 cursor-not-allowed'
+          : 'border-blue-500/25 bg-[#081624]/70 hover:border-sky-400/50 hover:bg-[#0a1c2e] cursor-pointer',
+      ].join(' ');
+      card.setAttribute('data-product', product.id);
+      // 占位卡可点（跳转咨询）；无权限的已上线产品进入锁态工作区
+      card.disabled = false;
+
+      const badge = document.createElement('span');
+      badge.className = 'inline-block text-[10px] px-2 py-0.5 rounded-full border border-sky-400/35 text-sky-200/90 bg-sky-500/10 mb-2';
+      badge.textContent = locked && !product.enabled ? (product.badge || '会员预留') : product.badge;
+
+      const title = document.createElement('div');
+      title.className = 'text-base font-semibold text-white';
+      title.textContent = product.title;
+
+      const sub = document.createElement('div');
+      sub.className = 'text-xs text-blue-300/70 mt-0.5';
+      sub.textContent = product.subtitle;
+
+      const desc = document.createElement('p');
+      desc.className = 'mt-2 text-xs text-blue-200/80 leading-relaxed';
+      desc.textContent = product.description;
+
+      const eta = document.createElement('p');
+      eta.className = 'mt-3 text-[11px] text-blue-300/50';
+      eta.textContent = product.etaHint || (locked ? '后续按会员等级开放' : '');
+
+      card.appendChild(badge);
+      card.appendChild(title);
+      card.appendChild(sub);
+      card.appendChild(desc);
+      if (eta.textContent) card.appendChild(eta);
+
+      card.addEventListener('click', () => {
+        if (!product.enabled) {
+          // 占位产品：引导咨询，不发分析
+          window.location.href = './contact.html#contact-form';
+          return;
+        }
+        const check = assertProductAllowed(product.id, entitlements);
+        if (!check.ok) {
+          enterProduct(product.id, { locked: true, lockMessage: check.message });
+          return;
+        }
+        enterProduct(product.id);
+      });
+
+      productHubCards.appendChild(card);
+    });
+  }
+
+  function setProductInUrl(productId, { clearJob = false } = {}) {
+    try {
+      const url = new URL(window.location.href);
+      if (productId) url.searchParams.set('product', productId);
+      else url.searchParams.delete('product');
+      if (clearJob) url.searchParams.delete('jobId');
+      window.history.replaceState({}, '', url.toString());
+    } catch (_) { /* ignore */ }
+  }
+
+  function showHub({ keepJob = false } = {}) {
+    currentProductId = '';
+    if (productHub) productHub.classList.remove('hidden');
+    if (toolHero) toolHero.classList.add('hidden');
+    if (workspaceLock) workspaceLock.classList.add('hidden');
+    setProductInUrl('', { clearJob: !keepJob && !currentJobId });
+    // 回到 Hub 时若仍在轮询，保留进度面板；否则不强制隐藏
+  }
+
+  /**
+   * 进入产品工作区
+   * @param {string} productId
+   * @param {{ locked?: boolean, lockMessage?: string, skipUrl?: boolean }} opts
+   */
+  function enterProduct(productId, opts = {}) {
+    const product = getProduct(productId);
+    if (!product) {
+      showHub();
+      return;
+    }
+    currentProductId = product.id;
+    progressProfile = getProgressProfile(product.id);
+    setActiveSteps(progressProfile.steps);
+
+    if (productHub) productHub.classList.add('hidden');
+    if (toolHero) toolHero.classList.remove('hidden');
+
+    if (workspaceTitle) workspaceTitle.textContent = product.title;
+    if (workspaceDesc) workspaceDesc.textContent = product.description;
+    if (productBadge) {
+      productBadge.textContent = product.badge || product.engine;
+      productBadge.classList.remove('hidden');
+    }
+    if (symbolInput) symbolInput.placeholder = product.symbolPlaceholder || '';
+    if (symbolHint) symbolHint.textContent = product.symbolHint || '';
+
+    const caps = product.capabilities || {};
+    const setWrap = (el, show) => {
+      if (!el) return;
+      el.classList.toggle('hidden', !show);
+    };
+    setWrap(modeSelectWrap, !!(caps.multiSymbols || caps.marketOnly));
+    // 模式选择：无 marketOnly 时去掉「仅大盘」并强制 stocks-only
+    if (modeSelect) {
+      const marketOpt = modeSelect.querySelector('option[value="market-only"]');
+      if (marketOpt) marketOpt.hidden = !caps.marketOnly;
+      if (!caps.marketOnly && !caps.multiSymbols) {
+        modeSelect.value = 'stocks-only';
+      }
+    }
+    setWrap(optMarketContextWrap, !!caps.marketContext);
+    setWrap(optRealtimeQuoteWrap, !!caps.realtimeQuote);
+    setWrap(optRealtimeTechWrap, !!caps.realtimeTech);
+    setWrap(optChipDistWrap, !!caps.chipDistribution);
+    if (advancedHint) {
+      advancedHint.textContent = product.id === 'tradingagents'
+        ? '多智能体模式耗时更长，请耐心等待；报告结构与标准投研略有不同。'
+        : '开启实时增强可能增加分析耗时；关闭后仍可生成基础报告。';
+    }
+
+    const locked = !!opts.locked;
+    if (workspaceLock) {
+      workspaceLock.classList.toggle('hidden', !locked);
+      if (workspaceLockMsg && opts.lockMessage) workspaceLockMsg.textContent = opts.lockMessage;
+    }
+    if (btnAnalyze) btnAnalyze.disabled = locked;
+
+    if (!opts.skipUrl) setProductInUrl(product.id);
+  }
+
+  function readProductFromUrl() {
+    try {
+      return (new URLSearchParams(window.location.search).get('product') || '').trim().toLowerCase();
+    } catch (_) {
+      return '';
+    }
   }
 
   function showInputHint(msg) {
@@ -335,6 +563,8 @@ document.addEventListener('DOMContentLoaded', () => {
     list.unshift({
       jobId: entry.jobId,
       symbol: entry.symbol || prev.symbol || '',
+      product: entry.product || prev.product || currentProductId || DEFAULT_PRODUCT_ID,
+      engine: entry.engine || prev.engine || '',
       status: entry.status || prev.status || 'queued',
       requestedAt: entry.requestedAt || prev.requestedAt || Date.now(),
       generatedAt: entry.generatedAt || prev.generatedAt || 0,
@@ -353,6 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('jobId', jobId);
+      if (currentProductId) url.searchParams.set('product', currentProductId);
       window.history.replaceState({}, '', url.toString());
     } catch (_) { /* ignore */ }
   }
@@ -360,25 +591,54 @@ document.addEventListener('DOMContentLoaded', () => {
   function bootstrapFromUrlOrStorage() {
     const params = new URLSearchParams(window.location.search);
     const jobId = (params.get('jobId') || '').trim();
+    const productFromUrl = (params.get('product') || '').trim().toLowerCase();
+
     if (jobId) {
       const recent = loadRecentJobs().find((item) => item.jobId === jobId);
-      resumeJob(jobId, recent ? recent.symbol : '');
+      const productId = productFromUrl
+        || (recent && recent.product)
+        || DEFAULT_PRODUCT_ID;
+      const gate = assertProductAllowed(productId, entitlements);
+      if (gate.ok) enterProduct(productId, { skipUrl: true });
+      else enterProduct(productId, { skipUrl: true, locked: true, lockMessage: gate.message });
+      resumeJob(jobId, recent ? recent.symbol : '', productId);
+      return;
     }
+
+    if (productFromUrl) {
+      const gate = assertProductAllowed(productFromUrl, entitlements);
+      if (getProduct(productFromUrl)) {
+        enterProduct(productFromUrl, gate.ok ? {} : { locked: true, lockMessage: gate.message });
+        return;
+      }
+    }
+
+    showHub();
   }
 
-  function resumeJob(jobId, symbol) {
+  function resumeJob(jobId, symbol, productId) {
     if (!jobId) return;
     stopPolling();
     stopAnalyzeSimMessages();
     isResultReady = false;
     currentJobId = jobId;
+    if (productId) {
+      currentProductId = productId;
+      progressProfile = getProgressProfile(productId);
+      setActiveSteps(progressProfile.steps);
+    }
     lastPhase = '';
     usePhaseProgress = false;
     lastPhaseSource = 'simulated';
     lastRunId = '';
     lastUpdatedAt = 0;
     persistJobIdToUrl(jobId);
-    saveRecentJob({ jobId, symbol, status: 'queued' });
+    saveRecentJob({
+      jobId,
+      symbol,
+      product: currentProductId || productId || DEFAULT_PRODUCT_ID,
+      status: 'queued',
+    });
 
     buildSteps(stepsContainer);
     showPanel();
@@ -413,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         progressPct.textContent = '100%';
       } else if (usePhaseProgress && lastPhase) {
         const label = PHASE_LABELS[lastPhase] || lastPhase;
-        const tip = (PHASE_ETA[lastPhase] && PHASE_ETA[lastPhase].typical) || '';
+        const tip = (activePhaseEta()[lastPhase] && activePhaseEta()[lastPhase].typical) || '';
         progressPct.textContent = tip ? `${label} · ${tip}` : label;
       } else {
         progressPct.textContent = `约 ${Math.round(pct)}%`;
@@ -427,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startVirtualProgress(from, to, durationMs) {
     if (progressRafId) cancelAnimationFrame(progressRafId);
-    const cappedTo = usePhaseProgress ? to : Math.min(to, VIRTUAL_PROGRESS_CAP);
+    const cappedTo = usePhaseProgress ? to : Math.min(to, activeProgressCap());
     const start = performance.now();
     const delta = cappedTo - from;
     if (delta <= 0) {
@@ -460,9 +720,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function stopElapsedTimer() { clearInterval(elapsedTimer); }
 
   function formatRemainHint(phase) {
-    const eta = PHASE_ETA[phase];
+    const eta = activePhaseEta()[phase];
     if (!eta) return '';
     if (eta.remainMax <= 0) return '即将完成';
+    // 研判阶段耗时已在进度条旁「阶段名 · 约 2–5 分钟」展示，底部不再重复「预计还需」
+    if (phase === 'analyze') return '';
     if (eta.remainMin === eta.remainMax) return `预计还需约 ${eta.remainMin} 分钟`;
     return `预计还需约 ${eta.remainMin}–${eta.remainMax} 分钟`;
   }
@@ -476,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /** Fisher–Yates 洗牌；尽量避免与上一轮末条首尾相接造成「刚看过又出现」 */
   function shuffleAnalyzeMessages(excludeLast) {
-    const pool = ANALYZE_SIM_MESSAGES.slice();
+    const pool = activeAnalyzeMessages().slice();
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       const tmp = pool[i];
@@ -519,7 +781,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!panelMessage) return;
       const head = (baseMessage && String(baseMessage).trim())
         ? String(baseMessage).trim()
-        : STEPS[VIRTUAL_HOLD_STEP_INDEX].desc;
+        : activeStepsList()[VIRTUAL_HOLD_STEP_INDEX].desc;
       const parts = [
         { text: head, tone: 'info' },
         { br: true },
@@ -550,9 +812,9 @@ document.addEventListener('DOMContentLoaded', () => {
         activateStep(idx, panelMessage);
         const from = Math.max(currentProgress, getStepStartPct(idx));
         const to = Math.min(getStepEndPct(idx), getStepStartPct(VIRTUAL_HOLD_STEP_INDEX));
-        const durSec = VIRTUAL_STEP_SECONDS[idx] != null
-          ? VIRTUAL_STEP_SECONDS[idx]
-          : ((STEPS[idx] && STEPS[idx].duration) || 15);
+        const durSec = activeVirtualStepSeconds()[idx] != null
+          ? activeVirtualStepSeconds()[idx]
+          : ((activeStepsList()[idx] && activeStepsList()[idx].duration) || 15);
         if (to > from) {
           startVirtualProgress(from, to, Math.max(durSec * 600, 1500));
         }
@@ -560,7 +822,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (panelMessage && !analyzeSimTimer && !alreadyPast) {
         const label = PHASE_LABELS[phase] || phase;
         let msg = (phaseMessage || `当前阶段：${label}`).trim();
-        const eta = PHASE_ETA[phase];
+        const eta = activePhaseEta()[phase];
         if (eta && eta.typical && !msg.includes('通常') && !msg.includes('约')) {
           msg += `（${eta.typical}）`;
         }
@@ -576,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (phase !== 'analyze') stopAnalyzeSimMessages();
       const from = Math.max(currentProgress, getStepStartPct(idx));
       const to = getStepEndPct(idx);
-      const durSec = (STEPS[idx] && STEPS[idx].duration) || 30;
+      const durSec = (activeStepsList()[idx] && activeStepsList()[idx].duration) || 30;
       if (to > from) {
         startVirtualProgress(from, to, Math.max(durSec * 800, 3000));
       } else {
@@ -586,7 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const label = PHASE_LABELS[phase] || phase;
-    const eta = PHASE_ETA[phase];
+    const eta = activePhaseEta()[phase];
     const remain = formatRemainHint(phase);
 
     if (phase === 'analyze') {
@@ -612,6 +874,16 @@ document.addEventListener('DOMContentLoaded', () => {
   function handleAnalyze() {
     if (isTriggering) return;
     if (btnAnalyze && btnAnalyze.disabled) return;
+    if (!currentProductId) {
+      showInputHint('请先选择分析产品');
+      showHub();
+      return;
+    }
+    const gate = assertProductAllowed(currentProductId, entitlements);
+    if (!gate.ok) {
+      showInputHint(gate.message || '当前产品暂不可用');
+      return;
+    }
 
     const raw = (symbolInput ? symbolInput.value.trim().toUpperCase() : '');
     const options = collectAnalysisOptions();
@@ -673,8 +945,8 @@ document.addEventListener('DOMContentLoaded', () => {
     startElapsedTimer();
 
     activateStep(0, panelMessage);
-    const firstDurMs = (VIRTUAL_STEP_SECONDS[0] != null ? VIRTUAL_STEP_SECONDS[0] : STEPS[0].duration) * 1000;
-    startVirtualProgress(0, Math.min(getStepEndPct(0), VIRTUAL_PROGRESS_CAP), firstDurMs);
+    const firstDurMs = (activeVirtualStepSeconds()[0] != null ? activeVirtualStepSeconds()[0] : activeStepsList()[0].duration) * 1000;
+    startVirtualProgress(0, Math.min(getStepEndPct(0), activeProgressCap()), firstDurMs);
 
     const t0 = Date.now();
     const forceRunForDedupe = forceRunCheckbox ? !!forceRunCheckbox.checked : true;
@@ -707,6 +979,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (statusNum === 429 || (result && (result.code === 'RATE_LIMITED' || result.code === 'DAILY_QUOTA_EXCEEDED'))) {
           throw new Error((result && result.message) || `触发频率过高，请 ${(result && result.resetIn) || 300} 秒后重试`);
         }
+        if (result && (result.code === 'PRODUCT_NOT_ALLOWED' || result.code === 'PRODUCT_NOT_FOUND')) {
+          throw new Error((result && result.message) || '当前产品暂不可用');
+        }
         if (result && result.code === 'PAT_NOT_CONFIGURED') {
           throw new Error(result.message || '分析服务暂未就绪，请稍后再试或联系站长');
         }
@@ -717,11 +992,14 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error('未能创建分析任务，请稍后重试');
       }
       currentJobId = String(result.jobId);
+      if (result.product) currentProductId = String(result.product);
       lastActionsUrl = result.actionsUrl || '';
       persistJobIdToUrl(currentJobId);
       saveRecentJob({
         jobId: currentJobId,
         symbol,
+        product: currentProductId || options.product || DEFAULT_PRODUCT_ID,
+        engine: options.engine || '',
         status: result.status || 'queued',
         requestedAt: result.requestedAt || Date.now(),
       });
@@ -764,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = startIdx; i <= holdIdx; i++) {
       if (isResultReady || usePhaseProgress) return;
 
-      if (currentProgress >= VIRTUAL_PROGRESS_CAP - 0.5) {
+      if (currentProgress >= activeProgressCap() - 0.5) {
         activateStep(holdIdx, panelMessage);
         setPhaseSourceHint(
           lastPhaseSource === 'db' || lastPhaseSource === 'pending'
@@ -777,11 +1055,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const isHold = (i === holdIdx);
       const to = isHold
-        ? VIRTUAL_PROGRESS_CAP
-        : Math.min(getStepEndPct(i), VIRTUAL_PROGRESS_CAP);
-      const durSec = VIRTUAL_STEP_SECONDS[i] != null
-        ? VIRTUAL_STEP_SECONDS[i]
-        : STEPS[i].duration;
+        ? activeProgressCap()
+        : Math.min(getStepEndPct(i), activeProgressCap());
+      const durSec = activeVirtualStepSeconds()[i] != null
+        ? activeVirtualStepSeconds()[i]
+        : activeStepsList()[i].duration;
       const durMs = Math.max(durSec * 1000, isHold ? 8000 : 2000);
 
       activateStep(i, panelMessage);
@@ -811,8 +1089,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!isResultReady && !usePhaseProgress) {
       activateStep(holdIdx, panelMessage);
-      applyProgress(VIRTUAL_PROGRESS_CAP);
-      currentProgress = VIRTUAL_PROGRESS_CAP;
+      applyProgress(activeProgressCap());
+      currentProgress = activeProgressCap();
       setPhaseSourceHint(
         lastPhaseSource === 'db' || lastPhaseSource === 'pending'
           ? lastPhaseSource
@@ -836,6 +1114,8 @@ document.addEventListener('DOMContentLoaded', () => {
       saveRecentJob({
         jobId: data.jobId || currentJobId,
         symbol: data.symbol || (panelSymbol && panelSymbol.textContent) || '',
+        product: data.product || currentProductId || DEFAULT_PRODUCT_ID,
+        engine: data.engine || '',
         status: 'succeeded',
         requestedAt: data.requestedAt || Date.now(),
         generatedAt: data.generatedAt || Date.now(),
@@ -844,6 +1124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         trend: m.trend || '',
         confidence: m.confidence,
       });
+      if (data.product && data.product !== currentProductId) {
+        currentProductId = data.product;
+        progressProfile = getProgressProfile(currentProductId);
+        setActiveSteps(progressProfile.steps);
+      }
     }
 
     const startVal = currentProgress;
@@ -924,7 +1209,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function pollJobResult(jobId) {
-    const deadline = Date.now() + POLL_DEADLINE_MS;
+    const deadline = Date.now() + activePollDeadlineMs();
     const pollStartedAt = Date.now();
     let rawFallbackTried = false;
 
@@ -1145,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           return;
         }
-        resumeJob(jobId, sym);
+        resumeJob(jobId, sym, item.product || currentProductId || DEFAULT_PRODUCT_ID);
       });
       historyList.appendChild(row);
     });
@@ -1244,7 +1529,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // 初始按钮图标（无 Font Awesome）
   setIcon(btnIcon, 'sparkles', { className: 'text-yellow-300 relative z-10', size: 16 });
 
-  // 页面有历史记录时展示折叠入口；URL jobId 优先恢复
+  // 产品入口卡片 + URL/历史恢复
+  renderProductHub();
   showJobHistory({ expand: false, allowEmpty: false });
   bootstrapFromUrlOrStorage();
 });

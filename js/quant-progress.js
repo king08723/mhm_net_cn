@@ -1,8 +1,25 @@
 /**
  * 进度步骤 UI、文案节点构建（避免任意 HTML 注入）
+ * 支持按产品切换步骤表（DSA / TradingAgents）
  */
 import { STEPS, TOTAL_DURATION, BADGES } from './quant-config.js';
 import { iconHtml, setIcon } from './quant-icons.js';
+
+/** 当前进度步骤表（enterProduct 时切换） */
+let activeSteps = STEPS;
+let activeTotalDuration = TOTAL_DURATION;
+
+/**
+ * @param {typeof STEPS | null | undefined} steps
+ */
+export function setActiveSteps(steps) {
+  activeSteps = steps && steps.length ? steps : STEPS;
+  activeTotalDuration = activeSteps.reduce((s, st) => s + st.duration, 0);
+}
+
+export function getActiveSteps() {
+  return activeSteps;
+}
 
 /**
  * 安全写入状态文案：[{ text, tone?, br? }]
@@ -39,8 +56,8 @@ export function setStatusMessage(el, parts) {
 
 export function getStepStartPct(idx) {
   let elapsed = 0;
-  for (let i = 0; i < idx; i++) elapsed += STEPS[i].duration;
-  return (elapsed / TOTAL_DURATION) * 94;
+  for (let i = 0; i < idx; i++) elapsed += activeSteps[i].duration;
+  return (elapsed / activeTotalDuration) * 94;
 }
 
 export function getStepEndPct(idx) {
@@ -50,8 +67,8 @@ export function getStepEndPct(idx) {
 export function buildSteps(stepsContainer) {
   if (!stepsContainer) return;
   stepsContainer.innerHTML = '';
-  STEPS.forEach((step, i) => {
-    const isLast = i === STEPS.length - 1;
+  activeSteps.forEach((step, i) => {
+    const isLast = i === activeSteps.length - 1;
     const row = document.createElement('div');
     row.className = 'flex gap-3 items-start';
     row.id = `step-row-${step.id}`;
@@ -112,7 +129,7 @@ export function buildSteps(stepsContainer) {
 }
 
 export function activateStep(idx, panelMessage) {
-  STEPS.forEach((s, i) => {
+  activeSteps.forEach((s, i) => {
     const iconEl = document.getElementById(`step-icon-${s.id}`);
     const labelEl = document.getElementById(`step-label-${s.id}`);
     const descEl = document.getElementById(`step-desc-${s.id}`);
@@ -147,7 +164,7 @@ export function activateStep(idx, panelMessage) {
 }
 
 export function completeStep(idx, sec) {
-  const step = STEPS[idx];
+  const step = activeSteps[idx];
   if (!step) return;
   const timeEl = document.getElementById(`step-time-${step.id}`);
   if (timeEl) {
@@ -157,7 +174,7 @@ export function completeStep(idx, sec) {
 }
 
 export function markAllStepsDone() {
-  STEPS.forEach((s) => {
+  activeSteps.forEach((s) => {
     const iconEl = document.getElementById(`step-icon-${s.id}`);
     const connEl = document.getElementById(`step-conn-${s.id}`);
     const labelEl = document.getElementById(`step-label-${s.id}`);
@@ -196,7 +213,9 @@ export function setBadge(panelBadge, state) {
 }
 
 export function markFirstStepError() {
-  const iconEl = document.getElementById(`step-icon-${STEPS[0].id}`);
+  const first = activeSteps[0];
+  if (!first) return;
+  const iconEl = document.getElementById(`step-icon-${first.id}`);
   if (!iconEl) return;
   iconEl.style.borderColor = 'rgba(239,68,68,0.5)';
   iconEl.style.background = 'rgba(239,68,68,0.15)';

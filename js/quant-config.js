@@ -22,7 +22,7 @@ export const MARKED_SRC = 'js/vendor/marked.min.js';
 export const DOMPURIFY_SRC = 'js/vendor/purify.min.js';
 
 export const DEFAULT_ANALYSIS_OPTIONS = {
-  mode: 'stocks-only',
+  mode: 'full',
   reportType: 'simple',
   reportLanguage: 'zh',
   notificationChannels: [],

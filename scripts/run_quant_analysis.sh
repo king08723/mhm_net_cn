@@ -4,7 +4,10 @@
 # 用法（cwd = analysis/ 上游根目录）：
 #   bash ../orchestrator/scripts/run_quant_analysis.sh <STOCK_LIST> <MODE> <FORCE_RUN>
 #
-# 环境变量：QUANT_PARAMS（JSON）、以及上游 main.py 所需的 LLM/数据源 Secrets
+# 环境变量：
+#   QUANT_PARAMS（JSON，含 product/engine）
+#   QUANT_ENGINE / QUANT_PRODUCT（可由本脚本从 QUANT_PARAMS 解析）
+#   以及上游所需的 LLM/数据源 Secrets
 
 set -euo pipefail
 
@@ -17,6 +20,51 @@ if [ -z "$STOCK_SYMBOL" ]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 从 QUANT_PARAMS 解析 engine/product（缺省 dsa）
+eval "$(
+  python3 - <<'PY'
+import json, os, shlex
+params = json.loads(os.environ.get("QUANT_PARAMS") or "{}")
+engine = (params.get("engine") or os.environ.get("QUANT_ENGINE") or "dsa").strip().lower()
+product = (params.get("product") or os.environ.get("QUANT_PRODUCT") or engine or "dsa").strip().lower()
+if engine in ("ta", "trading-agents"):
+    engine = "tradingagents"
+print(f"export QUANT_ENGINE={shlex.quote(engine)}")
+print(f"export QUANT_PRODUCT={shlex.quote(product)}")
+PY
+)"
+
+export STOCK_LIST="$STOCK_SYMBOL"
+export SYMBOL="$STOCK_SYMBOL"
+
+echo "=========================================="
+echo "🚀 Quant 编排仓 · 引擎分流"
+echo "=========================================="
+echo "⏰ 时间: $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S')"
+echo "🧩 product: ${QUANT_PRODUCT:-dsa}"
+echo "⚙️  engine: ${QUANT_ENGINE:-dsa}"
+echo "🎯 运行模式: $MODE"
+echo "📊 标的: $STOCK_LIST"
+echo "=========================================="
+
+# ---------- TradingAgents 路径 ----------
+if [ "${QUANT_ENGINE}" = "tradingagents" ]; then
+  if [ ! -f "tradingagents/graph/trading_graph.py" ] && [ ! -d "tradingagents" ]; then
+    echo "❌ 当前目录不是 TradingAgents 源码根: $(pwd)" >&2
+    exit 1
+  fi
+  mkdir -p data logs reports
+  # 无头 runner 在编排仓 scripts/；分析源码在 cwd
+  python3 "$SCRIPT_DIR/run_tradingagents.py"
+  echo ""
+  echo "📂 reports/:"
+  ls -la reports/ 2>/dev/null || echo "（空）"
+  exit 0
+fi
+
+# ---------- DSA 路径（默认） ----------
 if [ ! -f "main.py" ]; then
   echo "❌ 当前目录不是上游分析源码根（找不到 main.py）: $(pwd)" >&2
   exit 1
@@ -43,8 +91,6 @@ for key, value in mapping.items():
 PY
 )"
 
-export STOCK_LIST="$STOCK_SYMBOL"
-
 # 处理 LITELLM YAML 配置文件
 if [ -n "${LITELLM_CONFIG_YAML:-}" ] && [ -n "${LITELLM_CONFIG:-}" ]; then
   echo "📝 写入 LITELLM 配置: $LITELLM_CONFIG"
@@ -52,15 +98,8 @@ if [ -n "${LITELLM_CONFIG_YAML:-}" ] && [ -n "${LITELLM_CONFIG:-}" ]; then
   echo "$LITELLM_CONFIG_YAML" > "$LITELLM_CONFIG"
 fi
 
-echo "=========================================="
-echo "🚀 Quant 编排仓 · 上游分析"
-echo "=========================================="
-echo "⏰ 时间: $(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S')"
-echo "🎯 运行模式: $MODE"
-echo "📊 标的: $STOCK_LIST"
 echo "📝 报告类型: ${REPORT_TYPE:-}"
 echo "🔤 语言: ${REPORT_LANGUAGE:-}"
-echo "=========================================="
 echo "【AI】"
 echo "  Gemini:   $([ -n "${GEMINI_API_KEY:-}${GEMINI_API_KEYS:-}" ] && echo '✅' || echo '❌')"
 echo "  AIHubMix: $([ -n "${AIHUBMIX_KEY:-}" ] && echo '✅' || echo '⚪')"
@@ -69,7 +108,6 @@ echo "  DeepSeek: $([ -n "${DEEPSEEK_API_KEY:-}" ] && echo '✅' || echo '⚪')"
 echo "【数据源】"
 echo "  Tushare:  $([ -n "${TUSHARE_TOKEN:-}" ] && echo '✅' || echo '⚪')"
 echo "  TickFlow: $([ -n "${TICKFLOW_API_KEY:-}" ] && echo '✅' || echo '⚪')"
-echo "=========================================="
 
 FORCE_RUN_ARG=""
 if [ "$FORCE_RUN" = "true" ]; then

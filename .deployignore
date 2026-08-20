@@ -32,6 +32,7 @@ css/style.css
 js/quant.js
 js/quant-api.js
 js/quant-config.js
+js/quant-catalog.js
 js/quant-icons.js
 js/quant-progress.js
 js/quant-report.js

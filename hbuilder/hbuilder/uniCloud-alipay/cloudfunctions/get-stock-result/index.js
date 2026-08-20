@@ -294,6 +294,8 @@ async function fetchGithubJob(jobId) {
   return {
     jobId: String(manifest.jobId),
     symbol: String(manifest.symbol || '').toUpperCase(),
+    product: String(manifest.product || '').trim().toLowerCase(),
+    engine: String(manifest.engine || '').trim().toLowerCase(),
     status: status === 'succeeded' && !hasReport ? 'failed' : status,
     phase: (status === 'failed' && !hasReport)
       ? 'failed'
@@ -423,6 +425,8 @@ function jobResponse(job) {
     ready,
     jobId: job.jobId,
     symbol: job.symbol || '',
+    product: job.product || (job.params && job.params.product) || '',
+    engine: job.engine || (job.params && job.params.engine) || '',
     status,
     phase: job.phase || (status === 'queued' ? 'queued' : status),
     phaseMessage: job.phaseMessage || '',

@@ -5,10 +5,14 @@
  *
  * 单链路：持久化限流/去重 → 创建 analysis_jobs → workflow_dispatch(jobId) → 返回 jobId
  * 前端只认 jobId，不再使用 triggeredAt / since。
+ * 支持多产品入口（product → engine），会员校验钩子见 quant-catalog.js。
  */
 
 const https = require('https');
 const crypto = require('crypto');
+const {
+  resolveProductFromBody,
+} = require('./quant-catalog.js');
 
 // ============================================================
 // 安全配置：PAT 必须通过 uniCloud 云函数控制台的【环境变量】配置
@@ -36,7 +40,7 @@ const RECENT_SUCCEEDED_MS = 10 * 60 * 1000;
 
 const MAX_SYMBOLS_PER_JOB = 10;
 const DEFAULT_OPTIONS = {
-  mode: 'stocks-only',
+  mode: 'full',
   reportType: 'simple',
   reportLanguage: 'zh',
   notificationChannels: [],
@@ -89,7 +93,8 @@ function isValidSymbol(symbol) {
   return /^[A-Z0-9][A-Z0-9.\-]{0,19}$/.test(cleaned);
 }
 
-function normalizeSymbols(raw, allowMultiple) {
+function normalizeSymbols(raw, allowMultiple, maxSymbols) {
+  const limit = Number(maxSymbols) > 0 ? Number(maxSymbols) : MAX_SYMBOLS_PER_JOB;
   const symbols = String(raw || '')
     .trim()
     .toUpperCase()
@@ -101,8 +106,8 @@ function normalizeSymbols(raw, allowMultiple) {
   if (!allowMultiple && symbols.length > 1) {
     return { symbols, error: '当前任务不允许多个股票代码。' };
   }
-  if (symbols.length > MAX_SYMBOLS_PER_JOB) {
-    return { symbols, error: `一次最多分析 ${MAX_SYMBOLS_PER_JOB} 个股票代码。` };
+  if (symbols.length > limit) {
+    return { symbols, error: `一次最多分析 ${limit} 个股票代码。` };
   }
   const invalid = symbols.find((item) => !isValidSymbol(item));
   if (invalid) {
@@ -142,27 +147,57 @@ function normalizeNotificationChannels(channels, email) {
     : ['email'];
 }
 
-function normalizeOptions(body) {
+/**
+ * 规范化分析选项；product/engine 由目录决定，客户端不可伪造 engine
+ * @param {object} body
+ * @param {object} productCatalogEntry
+ */
+function normalizeOptions(body, productCatalogEntry) {
   const notificationEmail = String(body.notificationEmail || '').trim();
+  const product = productCatalogEntry;
+  let mode = parseChoice(body.mode, ALLOWED_MODES, product.defaultMode || DEFAULT_OPTIONS.mode);
+  if (product.forceMode) {
+    mode = product.forceMode;
+  }
+  if (!product.allowMarketOnly && mode === 'market-only') {
+    mode = 'stocks-only';
+  }
+
+  const multiSymbols = product.multiSymbols === false
+    ? false
+    : parseBoolean(body.multiSymbols, DEFAULT_OPTIONS.multiSymbols);
+
+  const isTa = product.engine === 'tradingagents';
+
   return {
-    mode: parseChoice(body.mode, ALLOWED_MODES, DEFAULT_OPTIONS.mode),
+    product: product.id,
+    engine: product.engine,
+    mode,
     reportType: parseChoice(body.reportType, ALLOWED_REPORT_TYPES, DEFAULT_OPTIONS.reportType),
     reportLanguage: parseChoice(body.reportLanguage, ALLOWED_REPORT_LANGUAGES, DEFAULT_OPTIONS.reportLanguage),
     notificationEmail,
     notificationChannels: normalizeNotificationChannels(body.notificationChannels, notificationEmail),
-    includeMarketContext: parseBoolean(body.includeMarketContext, DEFAULT_OPTIONS.includeMarketContext),
-    multiSymbols: parseBoolean(body.multiSymbols, DEFAULT_OPTIONS.multiSymbols),
-    enableRealtimeQuote: parseBoolean(body.enableRealtimeQuote, DEFAULT_OPTIONS.enableRealtimeQuote),
-    enableRealtimeTechnicalIndicators: parseBoolean(
-      body.enableRealtimeTechnicalIndicators,
-      DEFAULT_OPTIONS.enableRealtimeTechnicalIndicators
-    ),
-    enableChipDistribution: parseBoolean(body.enableChipDistribution, DEFAULT_OPTIONS.enableChipDistribution),
+    includeMarketContext: isTa
+      ? false
+      : parseBoolean(body.includeMarketContext, DEFAULT_OPTIONS.includeMarketContext),
+    multiSymbols,
+    enableRealtimeQuote: isTa
+      ? false
+      : parseBoolean(body.enableRealtimeQuote, DEFAULT_OPTIONS.enableRealtimeQuote),
+    enableRealtimeTechnicalIndicators: isTa
+      ? false
+      : parseBoolean(
+        body.enableRealtimeTechnicalIndicators,
+        DEFAULT_OPTIONS.enableRealtimeTechnicalIndicators
+      ),
+    enableChipDistribution: isTa
+      ? false
+      : parseBoolean(body.enableChipDistribution, DEFAULT_OPTIONS.enableChipDistribution),
   };
 }
 
 /**
- * 生成请求指纹：同标的+同参数短时去重用
+ * 生成请求指纹：同标的+同产品+同参数短时去重用
  * @param {string} symbol
  * @param {object} options
  * @returns {string}
@@ -170,6 +205,8 @@ function normalizeOptions(body) {
 function buildRequestFingerprint(symbol, options) {
   const payload = [
     String(symbol || '').toUpperCase(),
+    options.product || 'dsa',
+    options.engine || 'dsa',
     options.mode,
     options.reportType,
     options.reportLanguage,
@@ -461,10 +498,28 @@ exports.main = async (event, context) => {
     body = event;
   }
 
-  const options = normalizeOptions(body);
+  // 产品门禁：目录定 engine；本阶段 guest 全放行，以后按 plan 拦截
+  const productGate = resolveProductFromBody(body);
+  if (!productGate.ok) {
+    return {
+      statusCode: productGate.code === 'PRODUCT_NOT_ALLOWED' ? 403 : 400,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: false,
+        code: productGate.code,
+        message: productGate.message,
+      }),
+    };
+  }
+
+  const options = normalizeOptions(body, productGate.product);
   // 默认 true：周末/休市也能分析；前端未传时同样跳过交易日检查
   const forceRun = parseBoolean(body.forceRun, true);
-  const symbolResult = normalizeSymbols(body.symbol, options.multiSymbols);
+  const symbolResult = normalizeSymbols(
+    body.symbol,
+    options.multiSymbols,
+    productGate.product.maxSymbols
+  );
 
   if (symbolResult.error || !symbolResult.symbols.length) {
     return {
@@ -525,6 +580,8 @@ exports.main = async (event, context) => {
         : '近期已有相同参数的成功任务，已复用；如需强制重跑请勾选「重新分析」',
       jobId: existing.jobId,
       symbol: existing.symbol || rawSymbol,
+      product: existing.product || options.product,
+      engine: existing.engine || options.engine,
       status: existing.status || JOB_STATUS.QUEUED,
       phase: existing.phase || (existing.status === JOB_STATUS.SUCCEEDED ? 'succeeded' : 'queued'),
       params: existing.params || options,
@@ -546,6 +603,8 @@ exports.main = async (event, context) => {
   const jobRecord = {
     jobId,
     symbol: rawSymbol,
+    product: options.product,
+    engine: options.engine,
     status: JOB_STATUS.QUEUED,
     phase: 'queued',
     phaseMessage: '任务已创建，等待 Actions 入队',
@@ -570,6 +629,8 @@ exports.main = async (event, context) => {
     requestFingerprint,
     forceRun,
     params: {
+      product: options.product,
+      engine: options.engine,
       mode: options.mode,
       reportType: options.reportType,
       reportLanguage: options.reportLanguage,
@@ -599,7 +660,7 @@ exports.main = async (event, context) => {
     };
   }
 
-  console.log(`[ACTION] 派发工作流：jobId=${jobId}, symbol=${rawSymbol}, mode=${options.mode}, forceRun=${forceRun}, ip=${ip}`);
+  console.log(`[ACTION] 派发工作流：jobId=${jobId}, symbol=${rawSymbol}, product=${options.product}, engine=${options.engine}, mode=${options.mode}, forceRun=${forceRun}, ip=${ip}`);
   const { statusCode, body: githubBody } = await dispatchGitHubAction(rawSymbol, jobId, options, forceRun);
 
   if (statusCode === 204 || statusCode === 200) {
@@ -613,6 +674,8 @@ exports.main = async (event, context) => {
         message: '已创建分析任务并触发工作流',
         jobId,
         symbol: rawSymbol,
+        product: options.product,
+        engine: options.engine,
         status: JOB_STATUS.QUEUED,
         phase: 'queued',
         params: jobRecord.params,

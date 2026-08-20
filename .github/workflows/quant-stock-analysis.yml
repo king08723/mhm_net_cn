@@ -1,11 +1,17 @@
-# 路径 3：本仓编排量化分析（上游 daily_stock_analysis 零侵入）
-# 只做两件事：拉取上游源码 → 运行分析并写入本仓 analysis-results
+# 路径 3：本仓编排量化分析（上游零侵入）
+# 按 quant_params.engine 分流：
+#   dsa（默认）→ checkout daily_stock_analysis@dev → main.py
+#   tradingagents → checkout TradingAgents@dev → run_tradingagents.py
 #
 # 配置方式（二选一，推荐 A）：
 #   A) 与旧仓相同：在本仓 Settings → Secrets and variables → Actions
 #      把 daily_stock_analysis 里已有的 Secrets / Variables **同名**再建一遍
 #      （Variables 可直接复制可见值；Secrets 值不可导出，需从原申请处再贴一次）
 #   B) 可选：一条 QUANT_ENV / QUANT_ENV_B64（整份 KEY=VALUE），见 scripts/sync_quant_env_secret.sh
+#
+# TradingAgents 额外 Variables / Secrets：
+#   TA_UPSTREAM_REPO / TA_UPSTREAM_REF（默认 king08723/TradingAgents@dev）
+#   TRADINGAGENTS_* / OPENAI_API_KEY / GOOGLE_API_KEY / ALPHA_VANTAGE_API_KEY 等
 #
 # 触发：uniCloud trigger-stock-analysis → workflow_dispatch
 # 结果：king08723/mhm_net_cn@analysis-results/jobs/{jobId}/*
@@ -33,7 +39,7 @@ on:
           - market-only
           - stocks-only
       quant_params:
-        description: 'quant 页面扩展参数 JSON'
+        description: 'quant 页面扩展参数 JSON（含 product/engine）'
         required: false
         default: '{}'
         type: string
@@ -43,9 +49,9 @@ on:
         default: 'true'
         type: string
       upstream_ref:
-        description: '上游 daily_stock_analysis 的 git ref（分支/tag/sha）'
+        description: '上游分析仓 git ref（留空则 DSA→dev / TradingAgents→dev，或用对应 Variables）'
         required: false
-        default: 'main'
+        default: ''
         type: string
 
 concurrency:
@@ -58,7 +64,11 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(vars.ANALYSIS_TIMEOUT_MINUTES || '30') }}
+    # TradingAgents 多 Agent 更慢；可用 Variables.ANALYSIS_TIMEOUT_MINUTES 覆盖（建议 ≥60）
+    timeout-minutes: ${{ fromJSON(vars.ANALYSIS_TIMEOUT_MINUTES || '60') }}
+    outputs:
+      engine: ${{ steps.resolve.outputs.engine }}
+      product: ${{ steps.resolve.outputs.product }}
 
     steps:
       - name: Checkout orchestrator (glue)
@@ -66,11 +76,43 @@ jobs:
         with:
           path: orchestrator
 
-      - name: Checkout upstream analysis source
+      - name: Resolve engine from quant_params
+        id: resolve
+        env:
+          QUANT_PARAMS: ${{ github.event.inputs.quant_params || '{}' }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os
+          params = json.loads(os.environ.get("QUANT_PARAMS") or "{}")
+          engine = (params.get("engine") or "dsa").strip().lower()
+          product = (params.get("product") or engine or "dsa").strip().lower()
+          if engine in ("ta", "trading-agents"):
+              engine = "tradingagents"
+          if engine not in ("dsa", "tradingagents"):
+              engine = "dsa"
+          out = os.environ["GITHUB_OUTPUT"]
+          with open(out, "a", encoding="utf-8") as f:
+              f.write(f"engine={engine}\n")
+              f.write(f"product={product}\n")
+          print(f"::notice::Quant engine={engine} product={product}")
+          PY
+
+      - name: Checkout DSA upstream
+        if: ${{ steps.resolve.outputs.engine != 'tradingagents' }}
         uses: actions/checkout@v5
         with:
           repository: ${{ vars.UPSTREAM_REPO || 'king08723/daily_stock_analysis' }}
-          ref: ${{ github.event.inputs.upstream_ref || vars.UPSTREAM_REF || 'main' }}
+          ref: ${{ github.event.inputs.upstream_ref || vars.UPSTREAM_REF || 'dev' }}
+          path: analysis
+          token: ${{ secrets.UPSTREAM_CHECKOUT_TOKEN || github.token }}
+
+      - name: Checkout TradingAgents upstream
+        if: ${{ steps.resolve.outputs.engine == 'tradingagents' }}
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ vars.TA_UPSTREAM_REPO || 'king08723/TradingAgents' }}
+          ref: ${{ github.event.inputs.upstream_ref || vars.TA_UPSTREAM_REF || 'dev' }}
           path: analysis
           token: ${{ secrets.UPSTREAM_CHECKOUT_TOKEN || github.token }}
 
@@ -80,23 +122,43 @@ jobs:
         env:
           JOB_ID: ${{ github.event.inputs.job_id }}
           SYMBOL: ${{ github.event.inputs.stock_symbol }}
+          QUANT_PRODUCT: ${{ steps.resolve.outputs.product }}
+          QUANT_ENGINE: ${{ steps.resolve.outputs.engine }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANALYSIS_DOCS_BRANCH: analysis-results
         run: bash orchestrator/scripts/quant_bridge.sh mark checkout
 
-      - name: Setup Python
+      - name: Setup Python (DSA 3.11)
+        if: ${{ steps.resolve.outputs.engine != 'tradingagents' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: analysis/requirements.txt
 
-      - name: Install upstream dependencies
+      - name: Setup Python (TradingAgents 3.12)
+        if: ${{ steps.resolve.outputs.engine == 'tradingagents' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: analysis/pyproject.toml
+
+      - name: Install DSA dependencies
+        if: ${{ steps.resolve.outputs.engine != 'tradingagents' }}
         working-directory: analysis
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
           python -c "import futu; print('✅ futu SDK import OK')"
+
+      - name: Install TradingAgents dependencies
+        if: ${{ steps.resolve.outputs.engine == 'tradingagents' }}
+        working-directory: analysis
+        run: |
+          pip install --upgrade pip
+          pip install .
+          python -c "from tradingagents.graph.trading_graph import TradingAgentsGraph; print('✅ TradingAgents import OK')"
 
       - name: Prepare directories
         run: mkdir -p analysis/data analysis/logs analysis/reports
@@ -107,6 +169,8 @@ jobs:
         env:
           JOB_ID: ${{ github.event.inputs.job_id }}
           SYMBOL: ${{ github.event.inputs.stock_symbol }}
+          QUANT_PRODUCT: ${{ steps.resolve.outputs.product }}
+          QUANT_ENGINE: ${{ steps.resolve.outputs.engine }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ANALYSIS_DOCS_BRANCH: analysis-results
         run: bash orchestrator/scripts/quant_bridge.sh pre
@@ -120,7 +184,7 @@ jobs:
           QUANT_ENV: ${{ secrets.QUANT_ENV }}
           QUANT_ENV_B64: ${{ secrets.QUANT_ENV_B64 }}
 
-          # —— AI / LLM ——
+          # —— AI / LLM（DSA） ——
           GENERATION_BACKEND: ${{ vars.GENERATION_BACKEND || secrets.GENERATION_BACKEND }}
           GENERATION_FALLBACK_BACKEND: ${{ vars.GENERATION_FALLBACK_BACKEND || secrets.GENERATION_FALLBACK_BACKEND || 'litellm' }}
           GENERATION_BACKEND_TIMEOUT_SECONDS: ${{ vars.GENERATION_BACKEND_TIMEOUT_SECONDS || secrets.GENERATION_BACKEND_TIMEOUT_SECONDS }}
@@ -180,6 +244,26 @@ jobs:
           LLM_OPENAI_MODELS: ${{ vars.LLM_OPENAI_MODELS || secrets.LLM_OPENAI_MODELS }}
           LLM_OPENAI_ENABLED: ${{ vars.LLM_OPENAI_ENABLED || secrets.LLM_OPENAI_ENABLED }}
 
+          # —— TradingAgents 专用 ——
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY || secrets.GEMINI_API_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          DASHSCOPE_CN_API_KEY: ${{ secrets.DASHSCOPE_CN_API_KEY }}
+          ZHIPU_API_KEY: ${{ secrets.ZHIPU_API_KEY }}
+          ZHIPU_CN_API_KEY: ${{ secrets.ZHIPU_CN_API_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+          MINIMAX_CN_API_KEY: ${{ secrets.MINIMAX_CN_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TRADINGAGENTS_LLM_PROVIDER: ${{ vars.TRADINGAGENTS_LLM_PROVIDER || secrets.TRADINGAGENTS_LLM_PROVIDER }}
+          TRADINGAGENTS_DEEP_THINK_LLM: ${{ vars.TRADINGAGENTS_DEEP_THINK_LLM || secrets.TRADINGAGENTS_DEEP_THINK_LLM }}
+          TRADINGAGENTS_QUICK_THINK_LLM: ${{ vars.TRADINGAGENTS_QUICK_THINK_LLM || secrets.TRADINGAGENTS_QUICK_THINK_LLM }}
+          TRADINGAGENTS_LLM_BACKEND_URL: ${{ vars.TRADINGAGENTS_LLM_BACKEND_URL || secrets.TRADINGAGENTS_LLM_BACKEND_URL }}
+          TRADINGAGENTS_OUTPUT_LANGUAGE: ${{ vars.TRADINGAGENTS_OUTPUT_LANGUAGE || secrets.TRADINGAGENTS_OUTPUT_LANGUAGE }}
+          TRADINGAGENTS_MAX_DEBATE_ROUNDS: ${{ vars.TRADINGAGENTS_MAX_DEBATE_ROUNDS || secrets.TRADINGAGENTS_MAX_DEBATE_ROUNDS || '1' }}
+          TRADINGAGENTS_MAX_RISK_ROUNDS: ${{ vars.TRADINGAGENTS_MAX_RISK_ROUNDS || secrets.TRADINGAGENTS_MAX_RISK_ROUNDS || '1' }}
+
           # —— 数据源 ——
           TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
           TUSHARE_HTTP_URL: ${{ vars.TUSHARE_HTTP_URL || secrets.TUSHARE_HTTP_URL }}
@@ -235,6 +319,8 @@ jobs:
           LOG_LEVEL: INFO
           MAX_WORKERS: ${{ vars.MAX_WORKERS || secrets.MAX_WORKERS || '1' }}
           QUANT_PARAMS: ${{ github.event.inputs.quant_params || '{}' }}
+          QUANT_PRODUCT: ${{ steps.resolve.outputs.product }}
+          QUANT_ENGINE: ${{ steps.resolve.outputs.engine }}
 
           # —— 编排层 ——
           JOB_ID: ${{ github.event.inputs.job_id }}
@@ -268,6 +354,8 @@ jobs:
         env:
           SYMBOL: ${{ github.event.inputs.stock_symbol }}
           JOB_ID: ${{ github.event.inputs.job_id }}
+          QUANT_PRODUCT: ${{ steps.resolve.outputs.product }}
+          QUANT_ENGINE: ${{ steps.resolve.outputs.engine }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           ANALYSIS_DOCS_BRANCH: analysis-results
