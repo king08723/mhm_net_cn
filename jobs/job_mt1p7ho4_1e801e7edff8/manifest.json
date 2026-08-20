@@ -1,0 +1,22 @@
+{
+  "jobId": "job_mt1p7ho4_1e801e7edff8",
+  "symbol": "DELL",
+  "product": "tradingagents",
+  "engine": "tradingagents",
+  "status": "running",
+  "phase": "checkout",
+  "phaseMessage": "正在检出代码与准备仓库…（通常约 15–30 秒）",
+  "runId": "32388649780",
+  "updatedAt": 1787241114812,
+  "generatedAt": 0,
+  "finishedAt": 0,
+  "reportSha": "",
+  "marketReviewSha": "",
+  "reportLength": 0,
+  "marketReviewLength": 0,
+  "metricsSha": "",
+  "metricsLength": 0,
+  "hasMetrics": false,
+  "error": "",
+  "errorCode": ""
+}
