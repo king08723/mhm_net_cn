@@ -39,47 +39,73 @@ def _env_nonempty(*names: str) -> bool:
     return any((os.environ.get(n) or "").strip() for n in names)
 
 
-def _ensure_llm_provider_env() -> None:
-    """未显式配置 TRADINGAGENTS_LLM_PROVIDER 时，按已有 Key 自动选择。
+def _set_env_if_blank(name: str, value: str) -> None:
+    """GitHub Actions 常把未配置的 Secret/Variable 注入成空字符串，setdefault 无效。"""
+    if not (os.environ.get(name) or "").strip():
+        os.environ[name] = value
 
-    TradingAgents 默认 provider=openai；本站常只配 GEMINI/GOOGLE，不配 OPENAI，
-    会导致开跑即 ValueError。须在 import DEFAULT_CONFIG 之前写入环境变量。
+
+def _looks_like_openai_model(name: str) -> bool:
+    n = (name or "").strip().lower()
+    return n.startswith("gpt-") or n.startswith("o1") or n.startswith("o3") or n.startswith("o4")
+
+
+def _ensure_llm_provider_env() -> None:
+    """确保 TRADINGAGENTS_LLM_PROVIDER 与模型名匹配已有密钥。
+
+    TradingAgents 默认 provider=openai、模型 gpt-*；本站常只配 GEMINI。
+    Actions 里空 Variables 会变成 env=""，必须按「空白」处理并写入 google 模型。
+    须在 import DEFAULT_CONFIG 之前调用。
     """
     # Gemini 与 Google 客户端共用 GOOGLE_API_KEY
     if not (os.environ.get("GOOGLE_API_KEY") or "").strip():
         gemini = (os.environ.get("GEMINI_API_KEY") or os.environ.get("GEMINI_API_KEYS") or "").strip()
         if gemini:
-            # 多 key 时只取第一个
             os.environ["GOOGLE_API_KEY"] = gemini.split(",")[0].strip()
 
-    if (os.environ.get("TRADINGAGENTS_LLM_PROVIDER") or "").strip():
-        return
+    provider = (os.environ.get("TRADINGAGENTS_LLM_PROVIDER") or "").strip().lower()
+    if not provider:
+        if _env_nonempty("GOOGLE_API_KEY", "GEMINI_API_KEY", "GEMINI_API_KEYS"):
+            provider = "google"
+        elif _env_nonempty("OPENAI_API_KEY", "OPENAI_API_KEYS"):
+            provider = "openai"
+        elif _env_nonempty("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEYS"):
+            provider = "anthropic"
+        elif _env_nonempty("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEYS"):
+            provider = "deepseek"
+        elif _env_nonempty("XAI_API_KEY"):
+            provider = "xai"
+        if provider:
+            os.environ["TRADINGAGENTS_LLM_PROVIDER"] = provider
+            print(f"ℹ️ 未设置 TRADINGAGENTS_LLM_PROVIDER，按可用密钥自动选择: {provider}")
+        else:
+            print(
+                "⚠️ 未检测到 OPENAI/GOOGLE/ANTHROPIC/DEEPSEEK/XAI API Key；"
+                "请配置 Secrets，或设置 Variables.TRADINGAGENTS_LLM_PROVIDER。",
+                file=sys.stderr,
+            )
+            return
 
-    # 优先级：google → openai → anthropic → deepseek → xai
-    choice = None
-    if _env_nonempty("GOOGLE_API_KEY", "GEMINI_API_KEY", "GEMINI_API_KEYS"):
-        choice = "google"
-        os.environ.setdefault("TRADINGAGENTS_DEEP_THINK_LLM", "gemini-2.5-pro")
-        os.environ.setdefault("TRADINGAGENTS_QUICK_THINK_LLM", "gemini-2.5-flash")
-    elif _env_nonempty("OPENAI_API_KEY", "OPENAI_API_KEYS"):
-        choice = "openai"
-    elif _env_nonempty("ANTHROPIC_API_KEY", "ANTHROPIC_API_KEYS"):
-        choice = "anthropic"
-    elif _env_nonempty("DEEPSEEK_API_KEY", "DEEPSEEK_API_KEYS"):
-        choice = "deepseek"
-    elif _env_nonempty("XAI_API_KEY"):
-        choice = "xai"
+    # 与 provider 对齐模型（空白或仍是 openai 默认名时覆盖）
+    deep = (os.environ.get("TRADINGAGENTS_DEEP_THINK_LLM") or "").strip()
+    quick = (os.environ.get("TRADINGAGENTS_QUICK_THINK_LLM") or "").strip()
+    if provider == "google":
+        if not deep or _looks_like_openai_model(deep):
+            os.environ["TRADINGAGENTS_DEEP_THINK_LLM"] = "gemini-2.5-pro"
+        if not quick or _looks_like_openai_model(quick):
+            os.environ["TRADINGAGENTS_QUICK_THINK_LLM"] = "gemini-2.5-flash"
+    elif provider == "anthropic":
+        if not deep or _looks_like_openai_model(deep):
+            _set_env_if_blank("TRADINGAGENTS_DEEP_THINK_LLM", "claude-3-5-sonnet-20241022")
+        if not quick or _looks_like_openai_model(quick):
+            _set_env_if_blank("TRADINGAGENTS_QUICK_THINK_LLM", "claude-3-5-haiku-20241022")
 
-    if choice:
-        os.environ["TRADINGAGENTS_LLM_PROVIDER"] = choice
-        print(f"ℹ️ 未设置 TRADINGAGENTS_LLM_PROVIDER，按可用密钥自动选择: {choice}")
-    else:
-        print(
-            "⚠️ 未检测到 OPENAI/GOOGLE/ANTHROPIC/DEEPSEEK/XAI API Key；"
-            "TradingAgents 可能在初始化时失败。请在 mhm_net_cn Secrets 配置至少一个，"
-            "或设置 Variables.TRADINGAGENTS_LLM_PROVIDER。",
-            file=sys.stderr,
-        )
+    print(
+        "🤖 LLM env → "
+        f"provider={os.environ.get('TRADINGAGENTS_LLM_PROVIDER')} "
+        f"deep={os.environ.get('TRADINGAGENTS_DEEP_THINK_LLM')} "
+        f"quick={os.environ.get('TRADINGAGENTS_QUICK_THINK_LLM')}"
+    )
 
 
 def main() -> int:
@@ -115,6 +141,18 @@ def main() -> int:
     analysis_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     config = DEFAULT_CONFIG.copy()
+    # 二次对齐：防止模块已被其它路径先 import 导致 env 覆盖未生效
+    provider = (os.environ.get("TRADINGAGENTS_LLM_PROVIDER") or config.get("llm_provider") or "").strip()
+    if provider:
+        config["llm_provider"] = provider
+    if provider == "google":
+        deep = str(config.get("deep_think_llm") or "")
+        quick = str(config.get("quick_think_llm") or "")
+        if not deep or _looks_like_openai_model(deep):
+            config["deep_think_llm"] = os.environ.get("TRADINGAGENTS_DEEP_THINK_LLM") or "gemini-2.5-pro"
+        if not quick or _looks_like_openai_model(quick):
+            config["quick_think_llm"] = os.environ.get("TRADINGAGENTS_QUICK_THINK_LLM") or "gemini-2.5-flash"
+
     # 结果写到工作区，便于适配
     results_root = cwd / "reports" / "ta_raw"
     results_root.mkdir(parents=True, exist_ok=True)
@@ -126,6 +164,7 @@ def main() -> int:
     print(f"📅 date: {analysis_date}")
     print(f"🔤 language: {config.get('output_language')}")
     print(f"🤖 provider: {config.get('llm_provider')}")
+    print(f"🧠 deep/quick: {config.get('deep_think_llm')} / {config.get('quick_think_llm')}")
     print("==========================================")
 
     # 默认启用全部分析师（与 CLI 全选一致）
