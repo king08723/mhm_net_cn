@@ -1,0 +1,16 @@
+{
+  "jobId": "job_mt1psk9n_170256d947be",
+  "symbol": "SPCX",
+  "generatedAt": 1787242635817,
+  "runId": "32390260992",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "HOLD",
+  "riskLevel": "",
+  "paths": {
+    "report": "jobs/job_mt1psk9n_170256d947be/report.md",
+    "marketReview": "jobs/job_mt1psk9n_170256d947be/market_review.md",
+    "manifest": "jobs/job_mt1psk9n_170256d947be/manifest.json",
+    "metrics": "jobs/job_mt1psk9n_170256d947be/metrics.json"
+  }
+}
