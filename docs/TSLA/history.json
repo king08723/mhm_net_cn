@@ -1,7 +1,18 @@
 {
   "symbol": "TSLA",
-  "updatedAt": 1785602127504,
+  "updatedAt": 1787293410118,
   "jobs": [
+    {
+      "jobId": "job_mt2k9cir_27b2a897c926",
+      "symbol": "TSLA",
+      "generatedAt": 1787293403941,
+      "runId": "32454039525",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    },
     {
       "jobId": "job_msalbha3_a659965bb5f2",
       "symbol": "TSLA",
