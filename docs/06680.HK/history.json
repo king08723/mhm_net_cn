@@ -1,0 +1,17 @@
+{
+  "symbol": "06680.HK",
+  "updatedAt": 1787304317304,
+  "jobs": [
+    {
+      "jobId": "job_mt2qmzkd_a041051c20ca",
+      "symbol": "06680.HK",
+      "generatedAt": 1787304310031,
+      "runId": "32467340695",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    }
+  ]
+}
