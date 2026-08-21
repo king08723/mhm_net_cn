@@ -3,13 +3,13 @@
   "symbol": "TSLA",
   "product": "tradingagents",
   "engine": "tradingagents",
-  "status": "running",
-  "phase": "publish",
-  "phaseMessage": "正在整理摘要并发布研究报告…（通常约 20–40 秒）",
+  "status": "failed",
+  "phase": "failed",
+  "phaseMessage": "分析失败",
   "runId": "32449733767",
-  "updatedAt": 1787289426552,
+  "updatedAt": 1787289428385,
   "generatedAt": 0,
-  "finishedAt": 0,
+  "finishedAt": 1787289428385,
   "reportSha": "",
   "marketReviewSha": "",
   "reportLength": 0,
@@ -17,6 +17,6 @@
   "metricsSha": "",
   "metricsLength": 0,
   "hasMetrics": false,
-  "error": "",
-  "errorCode": ""
+  "error": "Actions 作业未成功完成",
+  "errorCode": "ANALYSIS_FAILED"
 }
