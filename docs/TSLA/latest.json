@@ -1,16 +1,16 @@
 {
-  "jobId": "job_msalbha3_a659965bb5f2",
+  "jobId": "job_mt2k9cir_27b2a897c926",
   "symbol": "TSLA",
-  "generatedAt": 1785602121457,
-  "runId": "30708383099",
+  "generatedAt": 1787293403941,
+  "runId": "32454039525",
   "status": "succeeded",
   "phase": "succeeded",
-  "rating": "观望",
-  "riskLevel": "中",
+  "rating": "HOLD",
+  "riskLevel": "",
   "paths": {
-    "report": "jobs/job_msalbha3_a659965bb5f2/report.md",
-    "marketReview": "jobs/job_msalbha3_a659965bb5f2/market_review.md",
-    "manifest": "jobs/job_msalbha3_a659965bb5f2/manifest.json",
-    "metrics": "jobs/job_msalbha3_a659965bb5f2/metrics.json"
+    "report": "jobs/job_mt2k9cir_27b2a897c926/report.md",
+    "marketReview": "jobs/job_mt2k9cir_27b2a897c926/market_review.md",
+    "manifest": "jobs/job_mt2k9cir_27b2a897c926/manifest.json",
+    "metrics": "jobs/job_mt2k9cir_27b2a897c926/metrics.json"
   }
 }
