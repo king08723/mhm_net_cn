@@ -1,0 +1,14 @@
+{
+  "rating": "HOLD",
+  "confidence": null,
+  "trend": "",
+  "supportLevels": [],
+  "resistanceLevels": [],
+  "riskLevel": "",
+  "dataAsOf": 0,
+  "modelVersion": "tradingagents",
+  "realtimeEnabled": false,
+  "degradedFeatures": [],
+  "symbol": "6680.HK",
+  "engine": "tradingagents"
+}
