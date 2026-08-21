@@ -1,0 +1,17 @@
+{
+  "symbol": "01787.HK",
+  "updatedAt": 1787308046597,
+  "jobs": [
+    {
+      "jobId": "job_mt2sxszl_ecc1a0579655",
+      "symbol": "01787.HK",
+      "generatedAt": 1787308040979,
+      "runId": "32472447558",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    }
+  ]
+}
