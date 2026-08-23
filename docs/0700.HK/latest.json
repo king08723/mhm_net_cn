@@ -1,0 +1,16 @@
+{
+  "jobId": "job_mt628szd_31a470c48e86",
+  "symbol": "0700.HK",
+  "generatedAt": 1787505008075,
+  "runId": "32653835111",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "HOLD",
+  "riskLevel": "",
+  "paths": {
+    "report": "jobs/job_mt628szd_31a470c48e86/report.md",
+    "marketReview": "jobs/job_mt628szd_31a470c48e86/market_review.md",
+    "manifest": "jobs/job_mt628szd_31a470c48e86/manifest.json",
+    "metrics": "jobs/job_mt628szd_31a470c48e86/metrics.json"
+  }
+}
