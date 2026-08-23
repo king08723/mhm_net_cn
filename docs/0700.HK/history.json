@@ -1,0 +1,17 @@
+{
+  "symbol": "0700.HK",
+  "updatedAt": 1787505014490,
+  "jobs": [
+    {
+      "jobId": "job_mt628szd_31a470c48e86",
+      "symbol": "0700.HK",
+      "generatedAt": 1787505008075,
+      "runId": "32653835111",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    }
+  ]
+}
