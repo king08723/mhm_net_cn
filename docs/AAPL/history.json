@@ -1,7 +1,18 @@
 {
   "symbol": "AAPL",
-  "updatedAt": 1785779172820,
+  "updatedAt": 1787971505638,
   "jobs": [
+    {
+      "jobId": "job_mtdrowxq_edbf674c8eae",
+      "symbol": "AAPL",
+      "generatedAt": 1787971500009,
+      "runId": "33229295376",
+      "status": "succeeded",
+      "rating": "HOLD",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    },
     {
       "jobId": "job_msdinx5l_e8f4158386f4",
       "symbol": "AAPL",
