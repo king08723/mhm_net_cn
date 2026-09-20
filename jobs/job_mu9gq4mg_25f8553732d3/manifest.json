@@ -1,0 +1,22 @@
+{
+  "jobId": "job_mu9gq4mg_25f8553732d3",
+  "symbol": "03750.HK",
+  "product": "dsa",
+  "engine": "dsa",
+  "status": "running",
+  "phase": "checkout",
+  "phaseMessage": "正在检出代码与准备仓库…（通常约 15–30 秒）",
+  "runId": "35495523883",
+  "updatedAt": 1789887378742,
+  "generatedAt": 0,
+  "finishedAt": 0,
+  "reportSha": "",
+  "marketReviewSha": "",
+  "reportLength": 0,
+  "marketReviewLength": 0,
+  "metricsSha": "",
+  "metricsLength": 0,
+  "hasMetrics": false,
+  "error": "",
+  "errorCode": ""
+}
