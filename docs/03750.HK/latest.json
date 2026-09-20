@@ -1,0 +1,16 @@
+{
+  "jobId": "job_mu973jue_1fd775780c4f",
+  "symbol": "03750.HK",
+  "generatedAt": 1789871364908,
+  "runId": "35484000424",
+  "status": "succeeded",
+  "phase": "succeeded",
+  "rating": "中性",
+  "riskLevel": "",
+  "paths": {
+    "report": "jobs/job_mu973jue_1fd775780c4f/report.md",
+    "marketReview": "jobs/job_mu973jue_1fd775780c4f/market_review.md",
+    "manifest": "jobs/job_mu973jue_1fd775780c4f/manifest.json",
+    "metrics": "jobs/job_mu973jue_1fd775780c4f/metrics.json"
+  }
+}
