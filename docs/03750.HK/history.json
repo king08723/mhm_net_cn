@@ -1,0 +1,17 @@
+{
+  "symbol": "03750.HK",
+  "updatedAt": 1789871370861,
+  "jobs": [
+    {
+      "jobId": "job_mu973jue_1fd775780c4f",
+      "symbol": "03750.HK",
+      "generatedAt": 1789871364908,
+      "runId": "35484000424",
+      "status": "succeeded",
+      "rating": "中性",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    }
+  ]
+}
