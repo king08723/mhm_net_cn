@@ -1,0 +1,14 @@
+{
+  "rating": "中性",
+  "confidence": null,
+  "trend": "",
+  "supportLevels": [],
+  "resistanceLevels": [],
+  "riskLevel": "",
+  "dataAsOf": 0,
+  "modelVersion": "tradingagents",
+  "realtimeEnabled": false,
+  "degradedFeatures": [],
+  "symbol": "3750.HK",
+  "engine": "tradingagents"
+}
