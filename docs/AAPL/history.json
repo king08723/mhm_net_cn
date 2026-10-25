@@ -1,7 +1,18 @@
 {
   "symbol": "AAPL",
-  "updatedAt": 1787971505638,
+  "updatedAt": 1792933055893,
   "jobs": [
+    {
+      "jobId": "job_mvntxawm_edbf674c8eae",
+      "symbol": "AAPL",
+      "generatedAt": 1792933047718,
+      "runId": "40195173781",
+      "status": "succeeded",
+      "rating": "持有",
+      "riskLevel": "中",
+      "trend": "震荡",
+      "confidence": 0.55
+    },
     {
       "jobId": "job_mtdrowxq_edbf674c8eae",
       "symbol": "AAPL",
