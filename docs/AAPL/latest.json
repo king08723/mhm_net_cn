@@ -1,16 +1,16 @@
 {
-  "jobId": "job_mtdrowxq_edbf674c8eae",
+  "jobId": "job_mvntxawm_edbf674c8eae",
   "symbol": "AAPL",
-  "generatedAt": 1787971500009,
-  "runId": "33229295376",
+  "generatedAt": 1792933047718,
+  "runId": "40195173781",
   "status": "succeeded",
   "phase": "succeeded",
-  "rating": "HOLD",
-  "riskLevel": "",
+  "rating": "持有",
+  "riskLevel": "中",
   "paths": {
-    "report": "jobs/job_mtdrowxq_edbf674c8eae/report.md",
-    "marketReview": "jobs/job_mtdrowxq_edbf674c8eae/market_review.md",
-    "manifest": "jobs/job_mtdrowxq_edbf674c8eae/manifest.json",
-    "metrics": "jobs/job_mtdrowxq_edbf674c8eae/metrics.json"
+    "report": "jobs/job_mvntxawm_edbf674c8eae/report.md",
+    "marketReview": "jobs/job_mvntxawm_edbf674c8eae/market_review.md",
+    "manifest": "jobs/job_mvntxawm_edbf674c8eae/manifest.json",
+    "metrics": "jobs/job_mvntxawm_edbf674c8eae/metrics.json"
   }
 }
