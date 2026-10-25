@@ -1,16 +1,16 @@
 {
-  "jobId": "job_mt628szd_31a470c48e86",
+  "jobId": "job_mvne5efm_b0cc8250f2c6",
   "symbol": "0700.HK",
-  "generatedAt": 1787505008075,
-  "runId": "32653835111",
+  "generatedAt": 1792906523552,
+  "runId": "40165912113",
   "status": "succeeded",
   "phase": "succeeded",
-  "rating": "HOLD",
+  "rating": "BUY",
   "riskLevel": "",
   "paths": {
-    "report": "jobs/job_mt628szd_31a470c48e86/report.md",
-    "marketReview": "jobs/job_mt628szd_31a470c48e86/market_review.md",
-    "manifest": "jobs/job_mt628szd_31a470c48e86/manifest.json",
-    "metrics": "jobs/job_mt628szd_31a470c48e86/metrics.json"
+    "report": "jobs/job_mvne5efm_b0cc8250f2c6/report.md",
+    "marketReview": "jobs/job_mvne5efm_b0cc8250f2c6/market_review.md",
+    "manifest": "jobs/job_mvne5efm_b0cc8250f2c6/manifest.json",
+    "metrics": "jobs/job_mvne5efm_b0cc8250f2c6/metrics.json"
   }
 }
