@@ -1,7 +1,18 @@
 {
   "symbol": "0700.HK",
-  "updatedAt": 1787505014490,
+  "updatedAt": 1792906529456,
   "jobs": [
+    {
+      "jobId": "job_mvne5efm_b0cc8250f2c6",
+      "symbol": "0700.HK",
+      "generatedAt": 1792906523552,
+      "runId": "40165912113",
+      "status": "succeeded",
+      "rating": "BUY",
+      "riskLevel": "",
+      "trend": "",
+      "confidence": null
+    },
     {
       "jobId": "job_mt628szd_31a470c48e86",
       "symbol": "0700.HK",
